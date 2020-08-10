@@ -1,0 +1,87 @@
+
+#play-menu {
+    position: fixed;
+    width: 100px;
+    top: 0;
+    left: 0;
+    background: #08232D;
+    z-index: 1000;
+    transition: width .3s ease .1s;
+}
+
+#play-menu:hover {
+    width: 280px;
+    transition: width .4s ease;
+}
+
+#play-menu .flex {
+    display: flex;
+    margin-top: 30px;
+    flex-direction: column;
+    height: 300px;
+    justify-content: space-around;
+    align-items: flex-start;
+}
+
+#play-menu .flex > a {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 50px;
+    width: 100%;
+}
+
+#play-menu .flex > a:hover {
+    background: #111521;
+}
+
+#play-menu .flex > a:nth-child(1) {
+    margin-bottom: 30px;
+}
+
+#play-menu .img {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    background: #510819;
+    margin: 0 35px 0 35px;
+}
+
+#play-menu .img.logo {
+    width: 60px;
+    height: 60px;
+    border-radius: 30px;
+    margin: 0 20px 0 20px;
+}
+
+#play-menu .img.logo::after {
+    content: "";
+    background: url("../assets/logo.svg") no-repeat center;
+    width: 80%;
+    height: 90%;
+    position: absolute;
+    top: 5%;
+    left: 13%;
+}
+
+
+#play-menu .text {
+    color: white;
+    font-family: "Montserrat", sans-serif;
+    font-size: 17px;
+    width: 0;
+    text-align: left;
+    margin-left: -15px;
+    opacity: 0;
+    transition: width .3s ease .1s, opacity .2s ease;
+}
+
+#play-menu .flex > a:nth-child(1) .text {
+    margin-left: 0;
+}
+
+#play-menu:hover .text {
+    width: 70px;
+    opacity: 1;
+    transition: width .4s ease, opacity .1s ease .3s;
+}
