@@ -26,13 +26,8 @@ class Physics_Genie {
 } );
 	}
 
-	public function deploy($request) {
-		$data = $request->get_json_params();
-		error_log( print_r( $data, true ) );
-		$response = new WP_REST_Response($posts);
-    $response->set_status(200);
-		include('deployer.php');
-    return $response;
+	public function deploy() {
+		include('deploy.php');
 	}
 
 	function callback_for_setting_up_scripts() {
