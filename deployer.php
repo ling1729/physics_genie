@@ -1,5 +1,5 @@
 <?php
-$content = file_get_contents("request.txt");
+$content = file_get_contents("php://input");
 $json    = json_decode($content, true);
 $file    = fopen(LOGFILE, "a");
 $time    = time();

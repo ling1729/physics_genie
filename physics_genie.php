@@ -27,9 +27,7 @@ class Physics_Genie {
 	}
 
 	public function deploy() {
-		$input = @file_get_contents('php://input'); 
-		file_put_contents("request.txt", json_decode($input, true)); // writes the post request to a file so the other script can read it, there is probably a better way to do this that I don't know about
-		include('deploy.php');
+		require_once('deploy.php');
 	}
 
 	function callback_for_setting_up_scripts() {
