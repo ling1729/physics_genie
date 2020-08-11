@@ -20,7 +20,7 @@ class Physics_Genie {
 		// Registers the path /physics_genie/git-deploy to update the plugin
 		add_action( 'rest_api_init', function () {
 			$input = @file_get_contents('php://input'); 
-			file_put_contents("request.txt", $request); // writes the post request to a file so the other script can read it, there is probably a better way to do this that I don't know about
+			file_put_contents("request.txt", $input); // writes the post request to a file so the other script can read it, there is probably a better way to do this that I don't know about
 			register_rest_route( 'physics_genie', '/git-deploy', array(
 				'methods'  => 'POST',
 				'callback' => array($this, 'deploy'),
