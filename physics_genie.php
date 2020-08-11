@@ -29,7 +29,9 @@ class Physics_Genie {
 	public function deploy($request) {
 		$data = $request->get_json_params();
 		error_log( print_r( $data, true ) );
-		include('deployer.php');
+		$response = new WP_REST_Response($posts);
+    $response->set_status(200);
+    return $response;
 	}
 	function callback_for_setting_up_scripts() {
 		wp_register_style( 'play_style', plugins_url("/styles/play.css", __FILE__));
