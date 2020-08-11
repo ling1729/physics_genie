@@ -4,7 +4,7 @@
     width: 100px;
     top: 0;
     left: 0;
-    background: #08232D;
+    background: black;
     z-index: 1000;
     transition: width .3s ease .1s;
 }
