@@ -18,9 +18,7 @@ class Physics_Genie {
 		add_action('wp_enqueue_scripts', array($this, 'callback_for_setting_up_scripts'));
 		add_action( 'template_redirect', array($this, 'template_redirect') );
 		// Registers the path /physics_genie/git-deploy to update the plugin
-		add_action( 'rest_api_init', function () {
-			$input = @file_get_contents('php://input'); 
-			file_put_contents("request.txt", $input); // writes the post request to a file so the other script can read it, there is probably a better way to do this that I don't know about
+		add_action('rest_api_init', function(){
 			register_rest_route( 'physics_genie', '/git-deploy', array(
 				'methods'  => 'POST',
 				'callback' => array($this, 'deploy'),
@@ -29,6 +27,8 @@ class Physics_Genie {
 	}
 
 	public function deploy() {
+		$input = @file_get_contents('php://input'); 
+		file_put_contents("request.txt", "test"); // writes the post request to a file so the other script can read it, there is probably a better way to do this that I don't know about
 		include('deploy.php');
 	}
 
