@@ -21,7 +21,7 @@ class Physics_Genie {
 		add_action( 'rest_api_init', function () {
 			register_rest_route( 'physics_genie', '/git-deploy', array(
 			'methods'  => 'POST',
-			'callback' => 'deploy',
+			'callback' => array($this, 'deploy'),
 		));
 } );
 	}
@@ -31,8 +31,10 @@ class Physics_Genie {
 		error_log( print_r( $data, true ) );
 		$response = new WP_REST_Response($posts);
     $response->set_status(200);
+		include('deployer.php');
     return $response;
 	}
+
 	function callback_for_setting_up_scripts() {
 		wp_register_style( 'play_style', plugins_url("/styles/play.css", __FILE__));
 		wp_enqueue_style( 'play_style' );
