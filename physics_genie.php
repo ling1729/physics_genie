@@ -17,9 +17,18 @@ class Physics_Genie {
 		add_action('wp', array($this, 'remove_admin_bar'));
 		add_action('wp_enqueue_scripts', array($this, 'callback_for_setting_up_scripts'));
 		add_action( 'template_redirect', array($this, 'template_redirect') );
-
+		// Registers the path /physics_genie/git-deploy to update the plugin
+		add_action( 'rest_api_init', function () {
+			register_rest_route( 'physics_genie', '/git-deploy', array(
+			'methods'  => 'POST',
+			'callback' => 'deploy',
+		));
+} );
 	}
 
+	function deploy($request) {
+		include('deployer.php');
+	}
 	function callback_for_setting_up_scripts() {
 		wp_register_style( 'play_style', plugins_url("/styles/play.css", __FILE__));
 		wp_enqueue_style( 'play_style' );
