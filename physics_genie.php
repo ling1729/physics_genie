@@ -27,8 +27,8 @@ class Physics_Genie {
 	}
 
 	function deploy($request) {
-    $data = $request->get_json_params();
-	  error_log( print_r( $data, true ) );
+		$data = $request->get_json_params();
+		error_log( print_r( $data, true ) );
 		include('deployer.php');
 	}
 	function callback_for_setting_up_scripts() {
