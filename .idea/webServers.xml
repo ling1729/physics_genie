@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="99353cdc-e93b-4cc7-8112-588250c996e7" name="physics_genie" url="http://ec2-54-153-56-57.us-west-1.compute.amazonaws.com">
+        <fileTransfer host="ec2-54-153-56-57.us-west-1.compute.amazonaws.com" port="22" rootFolder="/var/www/html" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

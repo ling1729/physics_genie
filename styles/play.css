@@ -4,7 +4,8 @@
     width: 100px;
     top: 0;
     left: 0;
-    background: rgb(29,34,41);
+    /*background: rgb(29,34,41);*/
+    background: black;
     z-index: 1000;
     transition: width .3s ease .1s;
 }
