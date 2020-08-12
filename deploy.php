@@ -6,6 +6,6 @@ define("LOGFILE", "deploy.log");                                       // The na
 define("GIT", "/usr/bin/git");                                         // The path to the git executable
 define("MAX_EXECUTION_TIME", 180);                                     // Override for PHP's max_execution_time (may need set in php.ini)
 define("BEFORE_PULL", "/usr/bin/git reset --hard @{u} && /usr/bin/git clean -dfx");               // A command to execute before pulling
-define("AFTER_PULL", "/usr/bin/chmod -R 777 " + DIR);                                              // A command to execute after successfully pulling
+define("AFTER_PULL", "/usr/bin/chmod -R 774 " + DIR);                                              // A command to execute after successfully pulling
 
 require_once("deployer.php");
