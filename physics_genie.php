@@ -17,6 +17,7 @@ class Physics_Genie {
 		add_action('wp', array($this, 'remove_admin_bar'));
 		add_action('wp_enqueue_scripts', array($this, 'callback_for_setting_up_scripts'));
 		add_action( 'template_redirect', array($this, 'template_redirect') );
+
 		// Registers the path /physics_genie/git-deploy to update the plugin
 		add_action('rest_api_init', function(){
 			register_rest_route( 'physics_genie', '/git-deploy', array(
@@ -77,7 +78,7 @@ class Physics_Genie {
 		$results = $wpdb->get_results( "SELECT * FROM pg_problems", OBJECT );
 
 		$attributes = shortcode_atts( array(
-			'results' => $results[18]
+			'results' => $results[29]
 		), null );
 
 		return $this->get_template_html( 'problem', $attributes);

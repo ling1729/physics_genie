@@ -15,55 +15,123 @@
 </head>
 
 <div id = "container-fluid">
-    <div id = "problem-line"></div>
     <div id = "problem">
-        HELLO WORLDSSSSSS
+        <div id = "result" style = "display: none">
+            <p id = "correct" style = "display: none">Correct</p>
+            <p id = "incorrect" style = "display: none">Incorrect</p>
+            <p id = "gave-up" style = "display: none">You Gave Up</p>
+        </div>
         <p><?php echo $attributes['results']->problem_text; ?></p>
+        <div id = "hints">
+            <p class = "hint one" style = "display: none">Hint: <?php echo $attributes['results']->hint_one; ?></p>
+            <p class = "hint two" style = "display: none">Hint: <?php echo $attributes['results']->hint_two; ?></p>
+        </div>
+        <div style = "width: 500px; height: 200px" id = "studentAnswer"><span></span></div>
+        <div id = "solution" style = "display: none">
+            <div id = "student-answers"></div>
+            <p style = "display: none" id = "answer">Answer: <span class = "correct"><?php echo $attributes['results']->answer; ?></span></p>
+            <p><?php echo $attributes['results']->solution; ?></p>
+        </div>
+        <div id = "buttons">
+            <button id = "submit">Submit</button>
+            <button id = "give-up">Give Up</button>
+            <button id = "save">Save</button>
+            <button id = "report" style = "display: none">Report an Error</button>
+            <button id = "next" style = "display: none">Next</button>
+        </div>
+    </div>
+    <div id = "solution" style = "display: none">
     </div>
 </div>
-
-<!--        <div style="width:500px;height:200px" id="studentAnswer"><span></span></div>-->
-<!--        <br>-->
-<!--    <h1>A: --><?php
-//    require_once '../quizzes-gs-php/quizzes/quizzes.php';
-//    $correctAnswer = "x+1";
-//    $studentAnswer = "1+x";
-//    //build a request for the service.
-//    $builder = com_wiris_quizzes_api_Quizzes::getInstance();
-//    $request = $builder->newSimpleGradeRequest($correctAnswer, $studentAnswer);
-//    //Make the remote call.
-//    $service = $builder->getQuizzesService();
-//    $response = $service->execute($request);
-//    //Get the response into QuestionInstance object. This object allows us to interpret the response of the service and see if the student's answer is correct.
-//    $instance = $builder->newQuestionInstance(null);
-//    $instance->update($response);
-//    //Ask for the correctness of the answer
-//    $correct = $instance->areAllAnswersCorrect();
-//    echo $builder;
-//    ?><!--</h1>-->
 
 <script>
     (function($) {
 
+        var attempt = 1;
+        var studentAnswers = [];
+
         $(document).ready(function() {
 
-            console.log("hello");
 
-            const container = $("#container-fluid");
+            var editor;
+            editor = com.wiris.jsEditor.JsEditor.newInstance({'language': 'en'});
+            editor.insertInto(document.getElementById('studentAnswer'));
 
-//            var editor;
-//            editor = com.wiris.jsEditor.JsEditor.newInstance({'language': 'en'});
-//            editor.insertInto(document.getElementById('studentAnswer'));
-//
-//
-//            alert(editor.getMathML());
-
-            container.height(window.innerHeight);
+            $("#container-fluid").height(window.innerHeight);
             window.addEventListener("resize", function() {
-                container.height(window.innerHeight);
+                $("#container-fluid").height(window.innerHeight);
+            });
+
+            $("#submit").on("click", function() {
+                studentAnswers.push(editor.getMathML());
+                if (answerValidator(editor.getMathML())) {
+                    showAnswer("correct");
+                } else if (attempt === 1) {
+                    $(".hint.one").show();
+                    attempt++;
+                    // editor.clear? <-- find this function
+                } else if (attempt === 2) {
+                    $(".hint.two").show();
+                    attempt++;
+                    // editor.clear
+                } else {
+                    showAnswer("incorrect");
+                }
+            });
+
+            $("#give-up").on("click", function() {
+                showAnswer("gave-up");
             });
 
         });
+
+        // Result Strings
+        //   Correct: 'correct'
+        //   Incorrect: 'incorrect'
+        //   Gave Up: 'gave-up'
+        function showAnswer(result) {
+
+            // Show divs
+            $("#solution").show();
+            $("#result").show();
+            $("#report").show();
+            $("#next").show();
+
+            // Hide divs
+            $("#hints").hide();
+            $("#studentAnswer").hide();
+            $("#correct").hide();
+            $("#incorrect").hide();
+            $("#gave-up").hide();
+            $("#submit").hide();
+            $("#give-up").hide();
+
+            if (result === "correct") {
+                $("#correct").show();
+            } else if (result === "incorrect") {
+                $("#incorrect").show();
+            } else if (result === "gave-up") {
+                $("#gave-up").show();
+            }
+
+            const ordinalNumbers = ["First", "Second", "Third"];
+            console.log(studentAnswers.length);
+            for (var i = 0; i < studentAnswers.length; i++) {
+                var answerClass = "incorrect";
+                if (result === "correct" && i === attempt - 1) {
+                    answerClass = "correct";
+                }
+                $("#student-answers").append("<p>" + ordinalNumbers[i] + " Answer: <span class = '" + answerClass + "'>" + studentAnswers[i] + "</span></p>");
+            }
+
+            if (result === "incorrect" || result === "gave-up") {
+                $("#answer").show();
+            }
+        }
+
+        function answerValidator(studentAnswer) {
+            return (studentAnswer.toString() === '<math xmlns="http://www.w3.org/1998/Math/MathML"><mn>2</mn><mi>k</mi></math>');
+        }
 
 
     })(jQuery);
