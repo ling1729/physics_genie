@@ -14,5 +14,5 @@
     border: 1px solid #111521;
     padding: 35px;
     background: red;
-    /*box-shadow: #111521 -0.1px 0 10px;*/
+    box-shadow: #111521 -0.1px 0 10px;
 }
