@@ -31,8 +31,10 @@ class Physics_Genie {
 	}
 
 	function callback_for_setting_up_scripts() {
-		wp_register_style( 'play_style', plugins_url("/styles/play.css", __FILE__));
-		wp_enqueue_style( 'play_style' );
+		wp_register_style( 'play_menu_style', plugins_url("/styles/play_menu.css", __FILE__));
+		wp_register_style( 'problem_style', plugins_url("/styles/problem.css", __FILE__));
+		wp_enqueue_style( 'play_menu_style' );
+		wp_enqueue_style( 'problem_style' );
 	}
 
 	public static function physics_genie_activated() {
