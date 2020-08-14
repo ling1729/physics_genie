@@ -18,6 +18,10 @@ class Physics_Genie {
 		add_action('wp_enqueue_scripts', array($this, 'callback_for_setting_up_scripts'));
 		add_action( 'template_redirect', array($this, 'template_redirect') );
 
+		// Ajax Actions
+		add_action('wp_ajax_submit_answer', array($this, 'submit_answer'));
+		add_action('wp_ajax_save_problem', array($this, 'save_problem'));
+
 		// Registers the path /physics_genie/git-deploy to update the plugin
 		add_action('rest_api_init', function(){
 			register_rest_route( 'physics_genie', '/git-deploy', array(
@@ -75,14 +79,19 @@ class Physics_Genie {
 	public function render_problem() {
 
 		global $wpdb;
-		$results = $wpdb->get_results( "SELECT * FROM pg_problems", OBJECT );
+
+		// THE PROBLM SELECTION ALGORITHM WILL GO HERE (SQL STATEMENT)
+		$results = $wpdb->get_results( "SELECT * FROM pg_problems WHERE pg_problems.problem_id NOT IN (SELECT problem_id FROM pg_user_problems WHERE user_id = ".get_current_user_id().")", OBJECT );
+
 
 		$attributes = shortcode_atts( array(
-			'results' => $results[29]
+			'problem' => $results[0]
 		), null );
 
 		return $this->get_template_html( 'problem', $attributes);
 	}
+
+
 
 	public function template_redirect() {
 		if (is_page('play')) {
@@ -96,6 +105,36 @@ class Physics_Genie {
 		}
 	}
 
+
+	// Ajax Functions
+	public function submit_answer() {
+		global $wpdb;
+		$wpdb->insert(
+			'pg_user_problems',
+			array(
+				'user_id' => get_current_user_id(),
+				'problem_id' => intval($_POST['problem_id']),
+				'num_attempts' => intval($_POST['num_attempts']),
+				'correct' => ($_POST['correct'] === 'true' ? true : false),
+				'saved' => false,
+				'skipped' => ($_POST['skipped'] === 'true' ? true : false)
+			)
+		);
+	}
+
+	public function save_problem() {
+		global $wpdb;
+		$wpdb->update(
+			'pg_user_problems',
+			array('saved' => ($_POST['saved'] === 'true' ? true : false)),
+			array(
+				'user_id' => get_current_user_id(),
+				'problem_id' => intval($_POST['problem_id'])
+			),
+			array('%d'),
+			array('%d', '%d')
+		);
+	}
 }
 
 

@@ -16,26 +16,29 @@
 
 <div id = "container-fluid">
     <div id = "problem">
+        <div id = "already-entered" style = "display: none">
+            <p>You have already tried this response</p>
+        </div>
         <div id = "result" style = "display: none">
             <p id = "correct" style = "display: none">Correct</p>
             <p id = "incorrect" style = "display: none">Incorrect</p>
             <p id = "gave-up" style = "display: none">You Gave Up</p>
         </div>
-        <p><?php echo $attributes['results']->problem_text; ?></p>
+        <p><?php echo $attributes['problem']->problem_text; ?></p>
         <div id = "hints">
-            <p class = "hint one" style = "display: none">Hint: <?php echo $attributes['results']->hint_one; ?></p>
-            <p class = "hint two" style = "display: none">Hint: <?php echo $attributes['results']->hint_two; ?></p>
+            <p class = "hint one" style = "display: none">Hint: <?php echo $attributes['problem']->hint_one; ?></p>
+            <p class = "hint two" style = "display: none">Hint: <?php echo $attributes['problem']->hint_two; ?></p>
         </div>
         <div style = "width: 500px; height: 200px" id = "studentAnswer"><span></span></div>
         <div id = "solution" style = "display: none">
             <div id = "student-answers"></div>
-            <p style = "display: none" id = "answer">Answer: <span class = "correct"><?php echo $attributes['results']->answer; ?></span></p>
-            <p><?php echo $attributes['results']->solution; ?></p>
+            <p style = "display: none" id = "answer">Answer: <span class = "correct"><?php echo $attributes['problem']->answer; ?></span></p>
+            <p><?php echo $attributes['problem']->solution; ?></p>
         </div>
         <div id = "buttons">
             <button id = "submit">Submit</button>
             <button id = "give-up">Give Up</button>
-            <button id = "save">Save</button>
+            <button id = "save" style = "display: none">Save</button>
             <button id = "report" style = "display: none">Report an Error</button>
             <button id = "next" style = "display: none">Next</button>
         </div>
@@ -49,6 +52,7 @@
 
         var attempt = 1;
         var studentAnswers = [];
+        var saved = false;
 
         $(document).ready(function() {
 
@@ -63,19 +67,24 @@
             });
 
             $("#submit").on("click", function() {
-                studentAnswers.push(editor.getMathML());
-                if (answerValidator(editor.getMathML())) {
-                    showAnswer("correct");
-                } else if (attempt === 1) {
-                    $(".hint.one").show();
-                    attempt++;
-                    // editor.clear? <-- find this function
-                } else if (attempt === 2) {
-                    $(".hint.two").show();
-                    attempt++;
-                    // editor.clear
+                if (studentAnswers.includes(editor.getMathML())) {
+                    $("#already-entered").show();
                 } else {
-                    showAnswer("incorrect");
+                    $("#already-entered").hide();
+                    studentAnswers.push(editor.getMathML());
+                    if (answerValidator(editor.getMathML())) {
+                        showAnswer("correct");
+                    } else if (attempt === 1) {
+                        $(".hint.one").show();
+                        attempt++;
+                        // editor.clear? <-- find this function
+                    } else if (attempt === 2) {
+                        $(".hint.two").show();
+                        attempt++;
+                        // editor.clear
+                    } else {
+                        showAnswer("incorrect");
+                    }
                 }
             });
 
@@ -83,7 +92,21 @@
                 showAnswer("gave-up");
             });
 
+            $("#next").on("click", function() {
+                location.reload();
+            });
+
+            $("#save").on("click", function() {
+                saved = !saved;
+                jQuery.post("<?php echo admin_url('admin-ajax.php'); ?>", {
+                    'action': 'save_problem',
+                    'problem_id': <?php echo $attributes['problem']->problem_id; ?>,
+                    'saved': saved
+                }, null);
+            })
+
         });
+
 
         // Result Strings
         //   Correct: 'correct'
@@ -91,11 +114,20 @@
         //   Gave Up: 'gave-up'
         function showAnswer(result) {
 
+            jQuery.post("<?php echo admin_url('admin-ajax.php'); ?>", {
+                'action': 'submit_answer',
+                'problem_id': <?php echo $attributes['problem']->problem_id; ?>,
+                'num_attempts': attempt,
+                'correct': (result === 'correct'),
+                'skipped': (result === 'gave-up')
+            }, null);
+
             // Show divs
             $("#solution").show();
             $("#result").show();
             $("#report").show();
             $("#next").show();
+            $("#save").show();
 
             // Hide divs
             $("#hints").hide();
@@ -105,6 +137,7 @@
             $("#gave-up").hide();
             $("#submit").hide();
             $("#give-up").hide();
+            $("#already-entered").hide();
 
             if (result === "correct") {
                 $("#correct").show();
@@ -115,7 +148,6 @@
             }
 
             const ordinalNumbers = ["First", "Second", "Third"];
-            console.log(studentAnswers.length);
             for (var i = 0; i < studentAnswers.length; i++) {
                 var answerClass = "incorrect";
                 if (result === "correct" && i === attempt - 1) {
