@@ -227,6 +227,7 @@
     align-items: center;
     padding-left: 20px;
     margin-bottom: 3px;
+    background: white;
     transition: background .25s ease;
 }
 
