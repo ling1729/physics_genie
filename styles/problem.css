@@ -1,11 +1,18 @@
-
 #container-fluid {
     position: fixed;
     top: 0;
     left: 0;
+    width: 100%;
+}
+
+#container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
-    width: 100%;
     justify-content: center;
 }
 
@@ -16,15 +23,12 @@
     color: rgb(29,34,41);
     background: white;
     position: relative;
+    font-family: 'Nunito', sans-serif;
 }
 
 #hints {
     margin-top: 10px;
     margin-bottom: 50px;
-}
-
-#student-answers .correct, #answer .correct {
-    color: green;
 }
 
 #student-answers .incorrect {
@@ -37,15 +41,13 @@
     padding: 15px 30px;
     color: white;
     top: 0;
-    left: -1px;
+    left: -2px;
     opacity: 0;
     font-size: 12px;
     text-align: center;
     transition: top .25s ease, opacity .25s ease;
     z-index: -1;
 }
-
-
 
 
 .flex.row {
@@ -76,16 +78,16 @@
     transition: height .25s ease;
 }
 
-#submit {
+.buttons .blue {
     border: 1px solid #285380;
     color: #285380;
 }
 
-#submit:hover {
+.buttons .blue:hover {
     color: white;
 }
 
-#submit::before {
+.buttons .blue::before {
     background: #285380;
 }
 
@@ -99,6 +101,11 @@
 
 .buttons .bottom::before {
     bottom: 0;
+}
+
+.buttons button .fa {
+    margin-right: 8px;
+    margin-top: 3px;
 }
 
 .buttons button:hover {
@@ -132,6 +139,150 @@
     font-style: italic;
     margin-left: 30px;
     color: #ff6469;
+}
+
+
+#result div {
+    width: calc(100% + 70px);
+    width: -moz-calc(100% + 70px);
+    width: -webkit-calc(100% + 70px);
+    margin: -35px 35px 35px -35px;
+    height: 60px;
+    font-weight: 900;
+    font-size: 20px;
+    font-family: 'Nunito', sans-serif;
+    font-style: italic;
+    vertical-align: middle;
+    line-height: 60px;
+    border-bottom: 1px solid #111521;
+    box-shadow: 0 0 10px rgba(39, 43, 80, 0.61) inset;
+    color: #111521;
+}
+
+#result #correct {
+    border-bottom: 1px solid rgb(5, 178, 0);
+    box-shadow: 0 0 10px rgba(5, 178, 0, 0.6) inset;
+    color: rgb(5, 178, 0);
+}
+
+#result #incorrect {
+    border-bottom: 1px solid #ff6469;
+    box-shadow: 0 0 10px rgb(255, 207, 209) inset;
+    color: #ff6469;
+}
+
+#result div .fa {
+    font-size: 35px;
+    height: 100%;
+    margin-left: 40px;
+    line-height: 100%;
+    vertical-align: middle;
+    padding-top: 8px;
+    margin-right: 15px;
+}
+
+#student-answers div {
+    background: rgba(255, 207, 209, 0.6);
+    color: #ff6469;
+    font-size: 12px;
+    padding: 15px;
+    margin-left: 50px;
+    margin-right: 100px;
+    margin-bottom: 20px;
+    box-shadow: -0.1px 0 10px rgba(120, 120, 120, 0.5);
+}
+
+#student-answers .correct {
+    background: rgba(191, 218, 197, 0.6);
+    color: rgb(5, 178, 0);
+}
+
+
+#answer {
+    font-style: italic;
+    font-size: 16px;
+    margin-top: 15px;
+}
+
+#answer .correct {
+    color: green;
+}
+
+#solution-text {
+    margin-top: 25px;
+    border: 1px solid #111521;
+    padding: 15px;
+}
+
+#save {
+    margin-right: 10px;
+    margin-bottom: 35px;
+}
+
+#next {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    text-align: right;
+    border-radius: 0;
+    border: none;
+    background: rgba(56, 100, 155, 0.05);
+    padding-right: 80px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    color: #111521;
+    font-size: 16px;
+    font-family: 'Montserrat', sans-serif;
+    font-style: italic;
+    font-weight: 500;
+    transition: background .4s ease;
+}
+
+#next .arrow {
+    position: absolute;
+    top: 10px;
+    right: 80px;
+    width: 25px;
+    height: 25px;
+    opacity: 0;
+    transition: right .3s ease .1s, opacity .3s ease 0s;
+}
+
+#next .arrow div {
+    position: absolute;
+    background: #111521;
+    height: 1.25px;
+}
+
+#next .arrow div:nth-child(1) {
+    top: 11.5px;
+    left: 0;
+    width: 25px;
+}
+
+#next .arrow div:nth-child(2) {
+    right: -0.7px;
+    top: 7.5px;
+    width: 15px;
+    transform: rotate(35deg);
+}
+
+#next .arrow div:nth-child(3) {
+    right: -0.7px;
+    bottom: 7.8px;
+    width: 15px;
+    transform: rotate(-35deg);
+}
+
+#next:hover .arrow {
+    right: 45px;
+    opacity: 1;
+    transition: right .3s ease, opacity .3s ease .1s;
+}
+
+#next:hover {
+    background: rgba(56, 100, 155, 0.1);
 }
 
 

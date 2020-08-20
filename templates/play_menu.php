@@ -81,12 +81,19 @@
 
             $("#site-header").css("display", "none");
             $("#footer").css("display", "none");
+            document.body.style.overflow = "hidden";
 
 
             playMenu.height(window.innerHeight);
+            $("body").height(window.innerHeight);
+
+            var style = document.createElement("style");
+            style.innerHTML = "body::-webkit-scrollbar {display: none;}";
+            document.head.appendChild(style);
 
             window.addEventListener("resize", function() {
                 playMenu.height(window.innerHeight);
+                $("body").height(window.innerHeight );
             });
 
 

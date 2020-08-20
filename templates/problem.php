@@ -1,6 +1,7 @@
 <head>
     <link href='https://fonts.googleapis.com/css?family=Montserrat' rel='stylesheet'>
     <link href='https://fonts.googleapis.com/css?family=Antic' rel='stylesheet'>
+    <link href='https://fonts.googleapis.com/css?family=Nunito' rel='stylesheet'>
     <script>
         MathJax = {
             tex: {
@@ -17,40 +18,44 @@
 </head>
 
 <div id = "container-fluid">
-    <div id = "problem">
-        <div id = "already-entered" class = "error">You have already tried this response</div>
-        <div id = "blank" class = "error">Please enter a response</div>
-        <div id = "result" style = "display: none">
-            <p id = "correct" style = "display: none">Correct</p>
-            <p id = "incorrect" style = "display: none">Incorrect</p>
-            <p id = "gave-up" style = "display: none">You Gave Up</p>
-        </div>
-        <p id = "problem-text"><?php echo $attributes['problem']->problem_text; ?></p>
-        <div id = "hints">
-            <p class = "hint one" style = "display: none">Hint: <?php echo $attributes['problem']->hint_one; ?></p>
-            <p class = "hint two" style = "display: none">Hint: <?php echo $attributes['problem']->hint_two; ?></p>
-        </div>
-        <div id = "previous-answers">
-            <span class = "previous-answer one"></span>
-            <span class = "previous-answer two"></span>
-        </div>
-        <div class = "flex row problem">
-            <div style = "width: 500px" id = "studentAnswer"><span></span></div>
-            <div class = "buttons">
-                <button id = "submit" class = "top">Submit</button>
-                <button id = "give-up" class = "bottom">Give Up</button>
+    <div id = "container">
+        <div id = "problem">
+            <div id = "already-entered" class = "error">You have already tried this response</div>
+            <div id = "blank" class = "error">Please enter a response</div>
+            <div id = "add-saved" class = "error">Problem added to saved</div>
+            <div id = "remove-saved" class = "error">Problem remove from saved</div>
+            <div id = "result" style = "display: none">
+                <div id = "correct" style = "display: none"><i class = "fa fa-check"></i>Correct</div>
+                <div id = "incorrect" style = "display: none"><i class = "fa fa-times"></i>Incorrect</div>
+                <div id = "gave-up" style = "display: none"><i class = "fa fa-minus-circle"></i>You Gave Up</div>
             </div>
-        </div>
+            <p id = "problem-text"><?php echo $attributes['problem']->problem_text; ?></p>
+            <div id = "hints">
+                <p class = "hint one" style = "display: none">Hint: <?php echo $attributes['problem']->hint_one; ?></p>
+                <p class = "hint two" style = "display: none">Hint: <?php echo $attributes['problem']->hint_two; ?></p>
+            </div>
+            <div id = "previous-answers">
+                <span class = "previous-answer one"></span>
+                <span class = "previous-answer two"></span>
+            </div>
+            <div class = "flex row problem">
+                <div style = "width: 500px" id = "studentAnswer"><span></span></div>
+                <div class = "buttons">
+                    <button id = "submit" class = "blue top">Submit</button>
+                    <button id = "give-up" class = "bottom">Give Up</button>
+                </div>
+            </div>
 
-        <div id = "solution" style = "display: none">
-            <div id = "student-answers"></div>
-            <p style = "display: none" id = "answer">Answer: <span class = "correct"><?php echo $attributes['problem']->answer; ?></span></p>
-            <p><?php echo $attributes['problem']->solution; ?></p>
-        </div>
-        <div class = "buttons">
-            <button id = "save" style = "display: none">Save</button>
-            <button id = "report" style = "display: none">Report an Error</button>
-            <button id = "next" style = "display: none">Next</button>
+            <div id = "solution" style = "display: none">
+                <div id = "student-answers"></div>
+                <p style = "display: none" id = "answer">Answer: <span class = "correct"><?php echo $attributes['problem']->answer; ?></span></p>
+                <p id = "solution-text"><?php echo $attributes['problem']->solution; ?></p>
+            </div>
+            <div class = "buttons">
+                <button id = "save" class = "blue top" style = "display: none"><i class = "fa fa-plus"></i>Save</button>
+                <button id = "report" class = "bottom" style = "display: none"><i class = "fa fa-flag"></i>Report an Error</button>
+            </div>
+            <button id = "next" style = "display: none">Next<div class = "arrow"><div></div><div></div><div></div></div></button>
         </div>
     </div>
 </div>
@@ -130,12 +135,32 @@
             });
 
             $("#save").on("click", function() {
+                if (saved) {
+                    jQuery.post("<?php echo admin_url('admin-ajax.php'); ?>", {
+                        'action': 'save_problem',
+                        'problem_id': <?php echo $attributes['problem']->problem_id; ?>,
+                        'saved': false
+                    }, function() {
+                        $("#save").html("<i class = 'fa fa-plus'></i>Save");
+                        $("#remove-saved").css({"top": "-" + $("#remove-saved").outerHeight() + "px", "opacity": "1"});
+                        setTimeout(function() {
+                            $("#remove-saved").css({"top": "0", "opacity": "0"});
+                        }, 1400);
+                    });
+                } else {
+                    jQuery.post("<?php echo admin_url('admin-ajax.php'); ?>", {
+                        'action': 'save_problem',
+                        'problem_id': <?php echo $attributes['problem']->problem_id; ?>,
+                        'saved': true
+                    }, function() {
+                        $("#save").html("<i class = 'fa fa-minus'></i>Remove From Saved");
+                        $("#add-saved").css({"top": "-" + $("#add-saved").outerHeight() + "px", "opacity": "1"});
+                        setTimeout(function() {
+                            $("#add-saved").css({"top": "0", "opacity": "0"});
+                        }, 1400);
+                    });
+                }
                 saved = !saved;
-                jQuery.post("<?php echo admin_url('admin-ajax.php'); ?>", {
-                    'action': 'save_problem',
-                    'problem_id': <?php echo $attributes['problem']->problem_id; ?>,
-                    'saved': saved
-                }, null);
             });
 
             $(document).on("click", function(event) {
@@ -219,8 +244,10 @@
 
             if (result === "correct") {
                 $("#correct").show();
+                $("#problem").css("border", "1px solid rgb(5, 178, 0)");
             } else if (result === "incorrect") {
                 $("#incorrect").show();
+                $("#problem").css("border", "1px solid #ff6469");
             } else if (result === "gave-up") {
                 $("#gave-up").show();
             }
@@ -230,11 +257,17 @@
                 if (result === "correct" && i === attempt - 1) {
                     answerClass = "correct";
                 }
-                $("#student-answers").append("<p>" + ordinalNumbers[i] + " Answer: <span class = '" + answerClass + "'>" + studentAnswers[i] + "</span></p>");
+                $("#student-answers").append("<div class = '" + answerClass + "'>" + ordinalNumbers[i] + " Response: " + studentAnswers[i] + "</div>");
             }
 
             if (result === "incorrect" || result === "gave-up") {
                 $("#answer").show();
+            }
+
+            if ($("#problem").offset().top <= 100) {
+                $("#container").css({"display": "block", "height": "inherit"});
+                $("#container-fluid").css("overflow-y", "scroll");
+                $("#problem").css("margin", "100px 20%");
             }
         }
 
