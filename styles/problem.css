@@ -18,12 +18,163 @@
 
 #problem {
     width: 60%;
-    border: 1px solid #111521;
+    border: 1px solid rgba(17, 21, 33, 0.4);
     padding: 35px;
     color: rgb(29,34,41);
     background: white;
     position: relative;
+    top: 50px;
     font-family: 'Nunito', sans-serif;
+}
+
+#progress-bars {
+    position: absolute;
+    top: -120px;
+    height: 110px;
+    width: calc(100% + 2px);
+    left: -1px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    z-index: -2;
+}
+
+#progress-bars > div {
+    border: 1px solid #285380;
+    height: 100%;
+    width: 49%;
+}
+
+#progress-bars .focus {
+    border: 1px solid rgba(56, 100, 155, 0.8);
+}
+
+#progress-bars h4 {
+    width: 100%;
+    font-family: "Antic", sans-serif;
+    font-style: italic;
+    background: #285380;
+    color: white;
+    padding: 8px 15px;
+    font-size: 19px;
+}
+
+#progress-bars .focus h4 {
+    background: rgba(56, 100, 155, 0.8);
+}
+
+#progress-bars .badge {
+    width: 55px;
+    height: 55px;
+    border-radius: 27.5px;
+    background: #f1f4ff;
+    border: 1px solid #285380;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 17px;
+    padding-right: 2px;
+    font-size: 27px;
+    font-family: "Caveat", sans-serif;
+    font-weight: 700;
+    top: -50px;
+    left: 5%;
+}
+
+#progress-bars .badge .img {
+    background: url("../assets/MechanicsBadge.png") no-repeat center;
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
+    width: 37px;
+    height: 37px;
+    position: absolute;
+    top: 8px;
+    left: 10px;
+    transition: width .4s ease, height .4s ease, top .4s ease;
+}
+
+#progress-bars .focus .badge {
+    border: 1px solid rgba(56, 100, 155, 0.8);
+}
+
+#progress-bars .focus .badge .img {
+    background: url("../assets/logo.svg") no-repeat center;
+    width: 45px;
+    height: 45px;
+    top: 1.5px;
+    left: 9px;
+    transition: width .4s ease, height .4s ease;
+}
+
+#progress-bars .bar {
+    width: 80%;
+    height: 35px;
+    border: 1px solid #285380;
+    position: relative;
+    top: -5px;
+    left: calc(5% + 40px);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+#progress-bars .bar > div {
+    height: 100%;
+}
+
+#progress-bars .bar .curr-progress {
+    background: #f1f4ff;
+    border-right: 1px solid #a5a9b4;
+    width: 0;
+    transition: width .8s ease;
+}
+
+#progress-bars .bar .advancement-progress {
+    border-right: 1px solid #b0b3cd;
+    background-image: linear-gradient(to right, transparent, #d8dcff);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 2px;
+    font-size: 10px;
+    color: rgba(74, 87, 94, 0.81);
+    width: 0;
+    transition: width .8s ease;
+}
+
+#progress-bars .focus .bar {
+    border: 1px solid rgba(56, 100, 155, 0.8);
+}
+
+#summary {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    font-style: italic;
+    margin-bottom: 17px;
+    margin-top: -5px;
+    height: 50px;
+    background: rgba(56, 100, 155, 0.1);
+    box-shadow: 0 0 8px 1px rgba(56, 100, 155, 0.3);
+}
+
+#summary .topic {
+    margin-right: 8px;
+}
+
+#summary .focus {
+    margin-left: 8px;
+}
+
+#summary .secondary-focus {
+    font-size: 13px;
+    margin-top: 3px;
 }
 
 #hints {

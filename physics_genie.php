@@ -81,11 +81,17 @@ class Physics_Genie {
 		global $wpdb;
 
 		// THE PROBLM SELECTION ALGORITHM WILL GO HERE (SQL STATEMENT)
-		$results = $wpdb->get_results( "SELECT * FROM pg_problems WHERE pg_problems.problem_id NOT IN (SELECT problem_id FROM pg_user_problems WHERE user_id = ".get_current_user_id().")", OBJECT );
+		$problem = $wpdb->get_results( "SELECT * FROM pg_problems WHERE pg_problems.problem_id NOT IN (SELECT problem_id FROM pg_user_problems WHERE user_id = ".get_current_user_id().")", OBJECT )[0];
+		$problem->main_focus = $wpdb->get_results("SELECT name FROM pg_topics WHERE topic = 0 AND focus = '".str_split($problem->topic)[0]."';")[0]->name;
+		$problem->other_foci = $wpdb->get_results("SELECT name FROM pg_topics WHERE topic = 0 AND focus = '".substr($problem->topic, 1)."';");
 
+		$topic_stats = $wpdb->get_results("SELECT * FROM pg_user_stats WHERE user_id = ".get_current_user_id()." AND topic = '0';")[0];
+		$focus_stats = $wpdb->get_results("SELECT * FROM pg_user_stats WHERE user_id = ".get_current_user_id()." AND topic = '0".str_split($problem->topic)[0]."';")[0];
 
 		$attributes = shortcode_atts( array(
-			'problem' => $results[0]
+			'problem' => $problem,
+			'topic_stats' => $topic_stats,
+			'focus_stats' => $focus_stats
 		), null );
 
 		return $this->get_template_html( 'problem', $attributes);
@@ -120,6 +126,79 @@ class Physics_Genie {
 				'skipped' => ($_POST['skipped'] === 'true' ? true : false)
 			)
 		);
+		if ($_POST['first_in_topic'] === 'true') {
+			$wpdb->insert(
+				'pg_user_stats',
+				array(
+					'user_id' => get_current_user_id(),
+					'topic' => $_POST['topic'],
+					'num_presented' => 1,
+					'num_skipped' => ($_POST['skipped'] === 'true' ? 1 : 0),
+					'num_saved' => 0,
+					'num_correct' => ($_POST['correct'] === 'true' ? 1 : 0),
+					'avg_attempts' => intval($_POST['num_attempts']),
+					'score' => 0,
+					'level' => 1,
+					'xp' => 10
+				)
+			);
+		} else {
+			$curr_stats = $wpdb->get_results("SELECT * FROM pg_user_stats WHERE user_id = ".get_current_user_id()." AND topic = ".$_POST['topic'].";")[0];
+			$wpdb->update(
+				'pg_user_stats',
+				array(
+					'num_presented' => $curr_stats->num_presented + 1,
+					'num_skipped' => $curr_stats->num_skipped + ($_POST['skipped'] === 'true' ? 1 : 0),
+					'num_correct' => $curr_stats->num_correct + ($_POST['correct'] === 'true' ? 1 : 0),
+					'avg_attempts' => (($curr_stats->avg_attempts * $curr_stats->num_presented) + intval($_POST['num_attempts']))/($curr_stats->num_skipped + intval($_POST['num_attempts'])),
+					'level' => ($curr_stats->xp + 10 >= 100 ? $curr_stats->level + 1 : $curr_stats->level),
+					'xp' => ($curr_stats->xp + 10 >= 100 ? $curr_stats->xp + 10 - 100 : $curr_stats->xp + 10)
+				),
+				array(
+					'user_id' => get_current_user_id(),
+					'topic' => $_POST['topic']
+				),
+				array('%d'),
+				array('%d', '%s')
+			);
+		}
+
+		if ($_POST['first_in_focus'] === 'true') {
+			$wpdb->insert(
+				'pg_user_stats',
+				array(
+					'user_id' => get_current_user_id(),
+					'topic' => $_POST['topic'].$_POST['focus'],
+					'num_presented' => 1,
+					'num_skipped' => ($_POST['skipped'] === 'true' ? 1 : 0),
+					'num_saved' => 0,
+					'num_correct' => ($_POST['correct'] === 'true' ? 1 : 0),
+					'avg_attempts' => intval($_POST['num_attempts']),
+					'score' => 0,
+					'level' => 1,
+					'xp' => 10
+				)
+			);
+		} else {
+			$curr_stats = $wpdb->get_results("SELECT * FROM pg_user_stats WHERE user_id = ".get_current_user_id()." AND topic = ".$_POST['topic'].$_POST['focus'].";")[0];
+			$wpdb->update(
+				'pg_user_stats',
+				array(
+					'num_presented' => $curr_stats->num_presented + 1,
+					'num_skipped' => $curr_stats->num_skipped + ($_POST['skipped'] === 'true' ? 1 : 0),
+					'num_correct' => $curr_stats->num_correct + ($_POST['correct'] === 'true' ? 1 : 0),
+					'avg_attempts' => (($curr_stats->avg_attempts * $curr_stats->num_presented) + intval($_POST['num_attempts']))/($curr_stats->num_skipped + intval($_POST['num_attempts'])),
+					'level' => ($curr_stats->xp + 10 >= 100 ? $curr_stats->level + 1 : $curr_stats->level),
+					'xp' => ($curr_stats->xp + 10 >= 100 ? $curr_stats->xp + 10 - 100 : $curr_stats->xp + 10)
+				),
+				array(
+					'user_id' => get_current_user_id(),
+					'topic' => $_POST['topic'].$_POST['focus']
+				),
+				array('%d'),
+				array('%d', '%s')
+			);
+		}
 	}
 
 	public function save_problem() {

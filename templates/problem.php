@@ -2,6 +2,7 @@
     <link href='https://fonts.googleapis.com/css?family=Montserrat' rel='stylesheet'>
     <link href='https://fonts.googleapis.com/css?family=Antic' rel='stylesheet'>
     <link href='https://fonts.googleapis.com/css?family=Nunito' rel='stylesheet'>
+    <link href='https://fonts.googleapis.com/css?family=Caveat' rel='stylesheet'>
     <script>
         MathJax = {
             tex: {
@@ -20,6 +21,24 @@
 <div id = "container-fluid">
     <div id = "container">
         <div id = "problem">
+            <div id = "progress-bars">
+                <div class = "topic">
+                    <h4>Mechanics</h4>
+                    <div class = "bar">
+                        <div class = "curr-progress"></div>
+                        <div class = "advancement-progress">+10</div>
+                    </div>
+                    <div class = "badge"><div class = "img"></div></div>
+                </div>
+                <div class = "focus">
+                    <h4>Angular Momentum</h4>
+                    <div class = "bar">
+                        <div class = "curr-progress"></div>
+                        <div class = "advancement-progress">+10</div>
+                    </div>
+                    <div class = "badge"><div class = "img"></div></div>
+                </div>
+            </div>
             <div id = "already-entered" class = "error">You have already tried this response</div>
             <div id = "blank" class = "error">Please enter a response</div>
             <div id = "add-saved" class = "error">Problem added to saved</div>
@@ -28,6 +47,18 @@
                 <div id = "correct" style = "display: none"><i class = "fa fa-check"></i>Correct</div>
                 <div id = "incorrect" style = "display: none"><i class = "fa fa-times"></i>Incorrect</div>
                 <div id = "gave-up" style = "display: none"><i class = "fa fa-minus-circle"></i>You Gave Up</div>
+            </div>
+            <div id = "summary">
+                <div class = "difficulty">
+                    <span>Difficulty:</span>
+                    <i class = "fa fa-star-o one" style = "margin-left: 5px;"></i>
+                    <i class = "fa fa-star-o two"></i>
+                    <i class = "fa fa-star-o three"></i>
+                    <i class = "fa fa-star-o four"></i>
+                    <i class = "fa fa-star-o five"></i>
+                </div>
+                <div class = "main-focus"><span class = "topic">Mechanics</span>><span class = "focus"></span></div>
+                <div class = "secondary-focus"></div>
             </div>
             <p id = "problem-text"><?php echo $attributes['problem']->problem_text; ?></p>
             <div id = "hints">
@@ -69,8 +100,14 @@
         const ordinalNumbers = ["First", "Second", "Third"];
         var saved = false;
         var editing = false;
+        const topicStats = <?php echo json_encode($attributes['topic_stats']); ?>;
+        const focusStats = <?php echo json_encode($attributes['focus_stats']); ?>;
 
         $(document).ready(function() {
+
+            setTimeout(setProgress, 800);
+
+            setSummary();
 
             setTimeout(function() {
                 $("#studentAnswer").css("height", ($("#studentAnswer .wrs_formulaDisplay").outerHeight() + 8) + "px");
@@ -86,8 +123,18 @@
             $("#studentAnswer").css("height", "44px");
 
             $("#container-fluid").height(window.innerHeight);
+            if ($("#progress-bars").offset().top <= 100) {
+                $("#container").css({"display": "block", "height": "inherit"});
+                $("#container-fluid").css("overflow-y", "scroll");
+                $("#problem").css("margin", "170px 20%");
+            }
             window.addEventListener("resize", function() {
                 $("#container-fluid").height(window.innerHeight);
+                if ($("#progress-bars").offset().top <= 100) {
+                    $("#container").css({"display": "block", "height": "inherit"});
+                    $("#container-fluid").css("overflow-y", "scroll");
+                    $("#problem").css("margin", "170px 20%");
+                }
             });
 
             $("#submit").on("click", function() {
@@ -125,7 +172,6 @@
                     }
                 }
             });
-
             $("#give-up").on("click", function() {
                 showAnswer("gave-up");
             });
@@ -188,6 +234,52 @@
         });
 
 
+        function setProgress() {
+
+            $("#progress-bars .badge .img").css({"width": "25px", "height": "25px", "top": "6px"});
+            $("#progress-bars .focus .badge .img").css({"width": "30px", "height": "30px", "top": "1.5px"});
+
+            if (topicStats === null) {
+                $("#progress-bars .topic .badge").append("1");
+            } else {
+                $("#progress-bars .topic .badge").append("" + topicStats.level);
+                $("#progress-bars .topic .bar .curr-progress").css("width", topicStats.xp + "%")
+            }
+
+            $("#progress-bars .topic .bar .advancement-progress").css("width", "10%");
+
+            if (focusStats === null) {
+                $("#progress-bars .focus .badge").append("1");
+            } else {
+                $("#progress-bars .focus .badge").append("" + topicStats.level);
+                $("#progress-bars .topic .bar .curr-progress").css("width", topicStats.xp + "%")
+            }
+
+            $("#progress-bars .focus .bar .advancement-progress").css("width", "10%");
+
+        }
+
+
+        function setSummary() {
+
+            for (var i = 2; i <= <?php echo $attributes['problem']->difficulty ?> + 1; i++) {
+                $("#summary .difficulty .fa:nth-child(" + i + ")").removeClass("fa-star-o");
+                $("#summary .difficulty .fa:nth-child(" + i + ")").addClass("fa-star");
+            }
+
+           $("#summary .focus").html("<?php echo $attributes['problem']->main_focus; ?>");
+            const otherFoci = <?php echo json_encode($attributes['problem']->other_foci); ?>;
+            if (otherFoci.length < 1) {
+                $("#summary .secondary-focus").hide();
+            } else {
+                $("#summary .secondary-focus").html("Also Includes: " + otherFoci[0].name);
+                for (var i = 1; i < otherFoci.length; i++) {
+                    $("#summary .secondary-focus").append(", " + otherFoci[i].name);
+                }
+            }
+        }
+
+
         function wrongAnimation(callback) {
             const problem = $("#problem");
             const duration = 80;
@@ -204,6 +296,11 @@
                     $("#submit").removeClass("before-red");
                     $("#submit").css("border-color", "#285380");
                     callback();
+                    if ($("#progress-bars").offset().top <= 100) {
+                        $("#container").css({"display": "block", "height": "inherit"});
+                        $("#container-fluid").css("overflow-y", "scroll");
+                        $("#problem").css("margin", "170px 20%");
+                    }
                 }, 200);
             });
         }
@@ -214,13 +311,20 @@
         //   Incorrect: 'incorrect'
         //   Gave Up: 'gave-up'
         function showAnswer(result) {
+            
+            console.log(focusStats === null);
+            console.log(("<?php echo $attributes['problem']->topic; ?>").charAt(0));
 
             jQuery.post("<?php echo admin_url('admin-ajax.php'); ?>", {
                 'action': 'submit_answer',
                 'problem_id': <?php echo $attributes['problem']->problem_id; ?>,
                 'num_attempts': attempt,
                 'correct': (result === 'correct'),
-                'skipped': (result === 'gave-up')
+                'skipped': (result === 'gave-up'),
+                'first_in_topic': (topicStats === null),
+                'first_in_focus': (focusStats === null),
+                'topic': 0,
+                'focus': ("<?php echo $attributes['problem']->topic; ?>").charAt(0)
             }, null);
 
             // Show divs
@@ -241,10 +345,21 @@
             $("#give-up").hide();
             $("#already-entered").hide();
             $("#blank").hide();
+            $("#progress-bars .advancement-progress").hide();
 
             if (result === "correct") {
                 $("#correct").show();
                 $("#problem").css("border", "1px solid rgb(5, 178, 0)");
+                if (topicStats === null) {
+                    $("#progress-bars .topic .curr-progress").css("width", "10%");
+                } else {
+                    $("#progress-bars .topic .curr-progress").css("width", (parseInt(topicStats.xp) + 10) + "%");
+                }
+                if (focusStats === null) {
+                    $("#progress-bars .focus .curr-progress").css("width", "10%");
+                } else {
+                    $("#progress-bars .focus .curr-progress").css("width", (parseInt(focusStats.xp) + 10) + "%");
+                }
             } else if (result === "incorrect") {
                 $("#incorrect").show();
                 $("#problem").css("border", "1px solid #ff6469");
@@ -264,10 +379,10 @@
                 $("#answer").show();
             }
 
-            if ($("#problem").offset().top <= 100) {
+            if ($("#progress-bars").offset().top <= 100) {
                 $("#container").css({"display": "block", "height": "inherit"});
                 $("#container-fluid").css("overflow-y", "scroll");
-                $("#problem").css("margin", "100px 20%");
+                $("#problem").css("margin", "170px 20%");
             }
         }
 
