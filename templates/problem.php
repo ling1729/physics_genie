@@ -14,8 +14,6 @@
             src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
     </script>
     <script src="https://www.wiris.net/demo/editor/editor"></script>
-<!--    <link rel="stylesheet" type="text/css" href="http://tikzjax.com/v1/fonts.css">-->
-<!--    <script src="http://tikzjax.com/v1/tikzjax.js"></script>-->
 </head>
 
 <div id = "container-fluid">

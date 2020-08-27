@@ -6,7 +6,7 @@
 </head>
 <div id = "play-menu">
 
-    <div class = "flex">
+    <div class = "flex" id = "links-container">
         <a href = "<?php echo get_page_link( get_page_by_title( 'Profile' )->ID ); ?>">
             <div class = "img logo"></div>
             <div class = "text">Home</div>
@@ -28,6 +28,12 @@
                 <i class = "fa fa-sliders" aria-hidden = "true"></i>
             </div>
             <div class = "text">Setup</div>
+        </a>
+        <a href = "<?php echo get_page_link( get_page_by_title( 'Submit' )->ID ); ?>" id = "submit-link">
+            <div class = "img setup">
+                <i class = "fa fa-database" aria-hidden = "true" style = "color: #ff845d;"></i>
+            </div>
+            <div class = "text" style = "color: #ff845d;">Submit</div>
         </a>
         <a href = "<?php echo get_page_link( get_page_by_title( 'Help' )->ID ); ?>">
             <div class = "img help">
@@ -96,6 +102,10 @@
                 $("body").height(window.innerHeight );
             });
 
+            if (!<?php echo $attributes['contributor']; ?>) {
+                $("#submit-link").hide();
+                $("#links-container").height(340);
+            }
 
         });
 

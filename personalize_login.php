@@ -537,9 +537,6 @@ class Personalize_Login {
 	 * @return string  The shortcode output
 	 */
 	public function render_password_lost_form( $attributes, $content = null ) {
-		echo '<script>';
-		echo 'console.log('. json_encode( "HELLO WORLD" ) .')';
-		echo '</script>';
 		// Parse shortcode attributes
 		$default_attributes = array( 'show_title' => false );
 		$attributes = shortcode_atts( $default_attributes, $attributes );
@@ -566,9 +563,6 @@ class Personalize_Login {
 	 * Initiates password reset.
 	 */
 	public function do_password_lost() {
-		echo '<script>';
-		echo 'console.log('. json_encode( "YIPEEE" ) .')';
-		echo '</script>';
 
 		if ( 'POST' == $_SERVER['REQUEST_METHOD'] ) {
 			$errors = retrieve_password();

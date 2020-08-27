@@ -12,6 +12,7 @@ class Physics_Genie {
 		// Shortcodes
 		add_shortcode('play_menu', array($this, 'render_play_menu'));
 		add_shortcode('problem', array($this, 'render_problem'));
+		add_shortcode('problem_submit', array($this, 'render_problem_submit'));
 
 		// Actions
 		add_action('wp', array($this, 'remove_admin_bar'));
@@ -38,8 +39,10 @@ class Physics_Genie {
 	function callback_for_setting_up_scripts() {
 		wp_register_style( 'play_menu_style', plugins_url("/styles/play_menu.css", __FILE__));
 		wp_register_style( 'problem_style', plugins_url("/styles/problem.css", __FILE__));
+		wp_register_style( 'problem_submit_style', plugins_url("/styles/problem_submit.css", __FILE__));
 		wp_enqueue_style( 'play_menu_style' );
 		wp_enqueue_style( 'problem_style' );
+		wp_enqueue_style( 'problem_submit_style' );
 	}
 
 	public static function physics_genie_activated() {
@@ -73,7 +76,10 @@ class Physics_Genie {
 	}
 
 	public function render_play_menu() {
-		return $this->get_template_html( 'play_menu');
+		$attributes = shortcode_atts(array(
+			'contributor' => ((current_user_can('administrator') || current_user_can('editor') || current_user_can('contributor')) ? 1 : 0)
+		), null);
+		return $this->get_template_html( 'play_menu', $attributes);
 	}
 
 	public function render_problem() {
@@ -95,6 +101,10 @@ class Physics_Genie {
 		), null );
 
 		return $this->get_template_html( 'problem', $attributes);
+	}
+
+	public function render_problem_submit() {
+		return $this->get_template_html('problem_submit');
 	}
 
 
