@@ -1,0 +1,183 @@
+/* Styles for the top bar */
+
+header {
+	background: #fff;
+	height: 60px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+	position: relative;
+	width: 100%;
+	z-index: 99;
+	display: block;
+}
+
+header, header * {
+	margin: 0;
+	padding: 0;
+	font-family: 'Roboto', sans-serif;
+	font-size: 20px;
+	font-weight: 300;
+	line-height: 1.45;
+}
+
+.wrs_css_inner {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 0px 20px;
+	position: relative;
+	height: 100%;
+}
+
+@media screen and (min-width: 1100px) {
+	.wrs_css_inner > nav,
+	.wrs_css_inner > nav > #menu-area,
+	.wrs_css_inner > nav > #menu-area > li {
+		height: 100%;
+	}
+}
+
+a.wrs_logo_small {
+	width: 32px;
+	float: left;
+	top: 11px;
+	position: relative;
+}
+header nav a {
+	font-size: 20px;
+	text-decoration: none;
+	font-weight: 400;
+	color: #222;
+}
+
+header nav span {
+	color: #333;
+	font-weight: 300;
+	text-decoration: none;
+	display: inline-block;
+	vertical-align: top;
+	margin-top: 6px;
+	margin-left: 8px;
+	margin-right: -4px;
+	font-size: 32px;
+}
+
+#logo_header {
+	width: 232px;
+	margin-top: 8px;
+}
+header img {
+	max-width: 100%;
+}
+
+header nav [type="checkbox"], nav label {
+	display: none;
+}
+
+.wrs_css_inner > nav > label {
+	z-index: 9;
+}
+
+header nav ul {
+	float: right;
+	opacity: 1;
+	height: auto;
+	list-style: none;
+}
+
+header nav > ul > li {
+	text-align: center;
+	-moz-transition: background-color 0.3s ease;
+	-o-transition: background-color 0.3s ease;
+	-webkit-transition: background-color 0.3s ease;
+	transition: background-color 0.3s ease;
+	float: left;
+}
+header nav li {
+	text-decoration: none;
+}
+
+header nav > ul > li > button, header nav > ul > li a, header nav > ul > li span {
+	cursor: pointer;
+	display: block;
+	outline: none;
+	text-decoration: none;
+	color: rgb(100,100,100);
+	padding: 17px 12px;
+	font-weight: 300;
+	-moz-transition: all .1s ease;
+	-o-transition: all .1s ease;
+	-webkit-transition: all .1s ease;
+	transition: all .1s ease;
+	font-size: 18px;
+}
+
+body {
+	margin: 0;
+}
+
+header nav > ul > li:hover {
+	background-color: #eee;
+}
+
+.wrs_css_logo_wiris {
+	text-decoration: none;
+	margin-top: 0;
+	margin-bottom: -10px;
+	margin-right: 4px;
+	display: inline-block;
+	height: 28px;
+}
+
+@media screen and (max-width: 1100px) {
+	header nav ul {
+		opacity: 0;
+		overflow: hidden;
+		height: 0;
+		-webkit-transition: opacity 0.3s ease;
+		transition: opacity 0.3s ease;
+	}
+
+	header nav label {
+		display: block;
+		background: #fff;
+		width: 40px;
+		height: 40px !important;
+		cursor: pointer;
+		position: absolute;
+		right: 20px;
+		top: 0px;
+		padding-top: 10px;
+	}
+
+	header nav label:after{
+		content: '';
+		display: block;
+		width: 30px;
+		height: 5px;
+		background: #f04a5d;
+		margin: 7px 5px;
+		box-shadow: 0px 10px 0px #f04a5d, 0px 20px 0px #f04a5d;
+	}
+
+	header nav [type="checkbox"]:checked ~ ul {
+		opacity: 1;
+		height: auto;
+		z-index: 9999;
+		position: absolute;
+		right: 20px;
+		left: 20px;
+		top: 60px;
+	}
+
+	header nav ul li, nav ul button {
+		display: block;
+		float: none;
+		width: 100%;
+		text-align: left;
+		background-color: #fff;
+		text-indent: 20px;
+	}
+
+	header nav > ul > li {
+		margin-left: 0px;
+	}
+}

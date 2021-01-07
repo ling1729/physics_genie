@@ -99,7 +99,7 @@
 
             window.addEventListener("resize", function() {
                 playMenu.height(window.innerHeight);
-                $("body").height(window.innerHeight );
+                $("body").height(window.innerHeight);
             });
 
             if (!<?php echo $attributes['contributor']; ?>) {

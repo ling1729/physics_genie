@@ -29,7 +29,7 @@
                     <div class = "badge"><div class = "img"></div></div>
                 </div>
                 <div class = "focus">
-                    <h4>Angular Momentum</h4>
+                    <h4><span class = "focus"></span></h4>
                     <div class = "bar">
                         <div class = "curr-progress"></div>
                         <div class = "advancement-progress">+10</div>
@@ -58,10 +58,11 @@
                 <div class = "main-focus"><span class = "topic">Mechanics</span>><span class = "focus"></span></div>
                 <div class = "secondary-focus"></div>
             </div>
-            <p id = "problem-text"><?php echo $attributes['problem']->problem_text; ?></p>
+            <p id = "problem-text"></p>
+            <div id = "diagram"></div>
             <div id = "hints">
-                <p class = "hint one" style = "display: none">Hint: <?php echo $attributes['problem']->hint_one; ?></p>
-                <p class = "hint two" style = "display: none">Hint: <?php echo $attributes['problem']->hint_two; ?></p>
+                <p class = "hint one" style = "display: none"></p>
+                <p class = "hint two" style = "display: none"></p>
             </div>
             <div id = "previous-answers">
                 <span class = "previous-answer one"></span>
@@ -70,15 +71,15 @@
             <div class = "flex row problem">
                 <div style = "width: 500px" id = "studentAnswer"><span></span></div>
                 <div class = "buttons">
-                    <button id = "submit" class = "blue top">Submit</button>
+                    <button id = "submit-pr" class = "blue top">Submit</button>
                     <button id = "give-up" class = "bottom">Give Up</button>
                 </div>
             </div>
 
             <div id = "solution" style = "display: none">
                 <div id = "student-answers"></div>
-                <p style = "display: none" id = "answer">Answer: <span class = "correct"><?php echo $attributes['problem']->answer; ?></span></p>
-                <p id = "solution-text"><?php echo $attributes['problem']->solution; ?></p>
+                <p style = "display: none" id = "answer">Answer: <span class = "correct"></span></p>
+                <p id = "solution-text"></p>
             </div>
             <div class = "buttons">
                 <button id = "save" class = "blue top" style = "display: none"><i class = "fa fa-plus"></i>Save</button>
@@ -101,7 +102,28 @@
         const topicStats = <?php echo json_encode($attributes['topic_stats']); ?>;
         const focusStats = <?php echo json_encode($attributes['focus_stats']); ?>;
 
+        function nl2br (str, is_xhtml) {
+            if (typeof str === 'undefined' || str === null) {
+                return '';
+            }
+            var breakTag = (is_xhtml || typeof is_xhtml === 'undefined') ? '<br />' : '<br>';
+            return (str + '').replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1' + breakTag + '$2');
+        }
+
+        $("#container").scroll(function() {
+            console.log("hello");
+        });
+
+
         $(document).ready(function() {
+
+            $("#problem-text").html("<?php echo $attributes['problem']->problem_text; ?>");
+            $(".hint.one").html("Hint: <?php echo $attributes['problem']->hint_one ?>");
+            $(".hint.two").html("Hint: <?php echo $attributes['problem']->hint_two ?>");
+            $("#solution-text").html("<?php echo $attributes['problem']->solution; ?>");
+            $("#answer .correct").html("<?php echo $attributes['problem']->answer; ?>");
+            $("#diagram").html("<?php echo $attributes['problem']->diagram; ?>");
+            MathJax.typeset();
 
             setTimeout(setProgress, 800);
 
@@ -122,20 +144,20 @@
 
             $("#container-fluid").height(window.innerHeight);
             if ($("#progress-bars").offset().top <= 100) {
-                $("#container").css({"display": "block", "height": "inherit"});
+                $("#container").css({"display": "block", "height": "auto"});
                 $("#container-fluid").css("overflow-y", "scroll");
                 $("#problem").css("margin", "170px 20%");
             }
             window.addEventListener("resize", function() {
                 $("#container-fluid").height(window.innerHeight);
                 if ($("#progress-bars").offset().top <= 100) {
-                    $("#container").css({"display": "block", "height": "inherit"});
+                    $("#container").css({"display": "block", "height": "auto"});
                     $("#container-fluid").css("overflow-y", "scroll");
                     $("#problem").css("margin", "170px 20%");
                 }
             });
 
-            $("#submit").on("click", function() {
+            $("#submit-pr").on("click", function() {
                 // Change conditional string if necessary
                 if (editor.getMathML().toString() === '<math xmlns="http://www.w3.org/1998/Math/MathML"/>') {
                     $("#blank").css({"top": "-" + $("#blank").outerHeight() + "px", "opacity": "1"});
@@ -149,25 +171,28 @@
                     }, 2000);
                 } else {
                     studentAnswers.push(editor.getMathML());
-                    if (answerValidator(editor.getMathML())) {
-                        showAnswer("correct");
-                    } else if (attempt === 1) {
-                        wrongAnimation(function() {
-                            $(".hint.one").show();
-                            $(".previous-answer.one").html(editor.getMathML());
-                            // editor.clear? <-- find this function
-                            attempt++;
-                        });
-                    } else if (attempt === 2) {
-                        wrongAnimation(function() {
-                            $(".hint.two").show();
-                            $(".previous-answer.two").html(",  " + editor.getMathML());
-                            attempt++;
-                            // editor.clear
-                        });
-                    } else {
-                        showAnswer("incorrect");
-                    }
+                    answerValidator(editor.getMathML()).done(function(response) {
+                        console.log(response);
+                        if (response) {
+                            showAnswer("correct");
+                        } else if (attempt === 1) {
+                            wrongAnimation(function() {
+                                $(".hint.one").show();
+                                $(".previous-answer.one").html(editor.getMathML());
+                                // editor.clear? <-- find this function
+                                attempt++;
+                            });
+                        } else if (attempt === 2) {
+                            wrongAnimation(function() {
+                                $(".hint.two").show();
+                                $(".previous-answer.two").html(",  " + editor.getMathML());
+                                attempt++;
+                                // editor.clear
+                            });
+                        } else {
+                            showAnswer("incorrect");
+                        }
+                    });
                 }
             });
             $("#give-up").on("click", function() {
@@ -265,7 +290,7 @@
                 $("#summary .difficulty .fa:nth-child(" + i + ")").addClass("fa-star");
             }
 
-           $("#summary .focus").html("<?php echo $attributes['problem']->main_focus; ?>");
+           $("span.focus").html("<?php echo $attributes['problem']->main_focus; ?>");
             const otherFoci = <?php echo json_encode($attributes['problem']->other_foci); ?>;
             if (otherFoci.length < 1) {
                 $("#summary .secondary-focus").hide();
@@ -282,8 +307,8 @@
             const problem = $("#problem");
             const duration = 80;
             problem.css("border-color", "#ff6469");
-            $("#submit").addClass("before-red");
-            $("#submit").css("border-color", "#ff6469");
+            $("#submit-pr").addClass("before-red");
+            $("#submit-pr").css("border-color", "#ff6469");
             problem.animate({left: "-20px"}, duration);
             problem.animate({left: "20px"}, duration);
             problem.animate({left: "-20px"}, duration);
@@ -291,11 +316,11 @@
             problem.animate({left: "0"}, duration, function() {
                 setTimeout(function() {
                     problem.css("border-color", "#111521");
-                    $("#submit").removeClass("before-red");
-                    $("#submit").css("border-color", "#285380");
+                    $("#submit-pr").removeClass("before-red");
+                    $("#submit-pr").css("border-color", "#285380");
                     callback();
                     if ($("#progress-bars").offset().top <= 100) {
-                        $("#container").css({"display": "block", "height": "inherit"});
+                        $("#container").css({"display": "block", "height": "auto"});
                         $("#container-fluid").css("overflow-y", "scroll");
                         $("#problem").css("margin", "170px 20%");
                     }
@@ -322,7 +347,8 @@
                 'first_in_topic': (topicStats === null),
                 'first_in_focus': (focusStats === null),
                 'topic': 0,
-                'focus': ("<?php echo $attributes['problem']->topic; ?>").charAt(0)
+                'focus': ("<?php echo $attributes['problem']->topic; ?>").charAt(0),
+                'submitter': <?php echo $attributes['problem']->submitter; ?>
             }, null);
 
             // Show divs
@@ -339,7 +365,7 @@
             $("#correct").hide();
             $("#incorrect").hide();
             $("#gave-up").hide();
-            $("#submit").hide();
+            $("#submit-pr").hide();
             $("#give-up").hide();
             $("#already-entered").hide();
             $("#blank").hide();
@@ -378,14 +404,22 @@
             }
 
             if ($("#progress-bars").offset().top <= 100) {
-                $("#container").css({"display": "block", "height": "inherit"});
+                $("#container").css({"display": "block", "height": "auto"});
                 $("#container-fluid").css("overflow-y", "scroll");
                 $("#problem").css("margin", "170px 20%");
             }
         }
 
         function answerValidator(studentAnswer) {
-            return (studentAnswer.toString() === '<math xmlns="http://www.w3.org/1998/Math/MathML"><mn>2</mn><mi>k</mi></math>');
+
+            return jQuery.post({url: "<?php echo admin_url('admin-ajax.php'); ?>", data: {
+                'action': 'check_answer',
+                'correct_answer': "<?php $attributes['problem']->answer ?>",
+                'student_answer': studentAnswer
+            }});
+
+
+
         }
 
 

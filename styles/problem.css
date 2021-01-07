@@ -242,7 +242,7 @@
     background: #285380;
 }
 
-#submit.before-red::before {
+#submit-pr.before-red::before {
     background: #ff6469;
 }
 

@@ -422,7 +422,7 @@ class Personalize_Login {
 					$redirect_url = add_query_arg( 'register-errors', $errors, $redirect_url );
 				} else {
 					// Success, redirect to login page.
-					$redirect_url = home_url( 'problem' );
+					$redirect_url = home_url( 'register-problem-setup' );
 					$redirect_url = add_query_arg( 'registered', $email, $redirect_url );
 				}
 			}
