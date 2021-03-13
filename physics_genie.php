@@ -9,6 +9,7 @@ class Physics_Genie {
 	public function __construct() {
 		$personalize_login = new Personalize_Login();
 
+
 		// Shortcodes
 		add_shortcode('play_menu', array($this, 'render_play_menu'));
 		add_shortcode('problem', array($this, 'render_problem'));
@@ -27,17 +28,74 @@ class Physics_Genie {
 		add_action('wp_ajax_add_source', array($this, 'add_source'));
 		add_action('wp_ajax_submit_problem', array($this, 'submit_problem'));
 
-		// Registers the path /physics_genie/git-deploy to update the plugin
+		// Registers API routes
 		add_action('rest_api_init', function(){
+			// Registers the path /physics_genie/git-deploy to update the plugin
 			register_rest_route( 'physics_genie', '/git-deploy', array(
 				'methods'  => 'POST',
 				'callback' => array($this, 'deploy'),
+			));
+
+			//Get user metadata
+			register_rest_route('physics_genie', 'user-metadata', array(
+				'methods' => 'GET',
+				'callback' => array($this, 'get_user_metadata')
+			));
+
+			//Get problem by problem id
+			register_rest_route('physics_genie', 'problem/(?P<problem>\d+)', array(
+				'methods' => 'GET',
+				'callback' => array($this, 'get_problem_by_id')
+			));
+
+			//Get contributor problems from token
+			register_rest_route('physics_genie', 'contributor-problems', array(
+				'methods' => 'GET',
+				'callback' => array($this, 'get_contributor_problems')
+			));
+
+			//Get submit data
+			register_rest_route('physics_genie', 'submit-data', array(
+				'methods' => 'GET',
+				'callback' => array($this, 'get_submit_data')
 			));
 } );
 	}
 
 	public function deploy() {
 		require_once('deploy.php');
+	}
+
+	public function get_user_metadata() {
+		$data = null;
+		$data->contributor = ((current_user_can('administrator') || current_user_can('editor') || current_user_can('contributor')) ? true : false);
+		return $data;
+	}
+
+	public function get_problem_by_id( $data ) {
+		global $wpdb;
+
+		$problem = $wpdb->get_results("SELECT * FROM pg_problems WHERE pg_problems.problem_id = ".$data['problem'].";", OBJECT)[0];
+		$problem->main_focus = $wpdb->get_results("SELECT name FROM pg_topics WHERE topic = 0 AND focus = '".$problem->main_focus."';")[0]->name;
+		$problem->other_foci = $wpdb->get_results("SELECT name FROM pg_topics WHERE topic = 0 AND focus = '".substr($problem->other_foci, 0)."';");
+
+		return $problem;
+	}
+
+	public function get_contributor_problems() {
+		global $wpdb;
+
+		return $wpdb->get_results("SELECT * FROM pg_problems WHERE submitter = ".(get_current_user_id() === 1 ? 17 : get_current_user_id())." ORDER BY problem_id DESC;");
+	}
+
+	public function get_submit_data() {
+		global $wpdb;
+		$data = null;
+		$data->topics = $wpdb->get_results("SELECT topic, name FROM pg_topics WHERE focus = 'z';");
+		$data->focuses = $wpdb->get_results("SELECT focus, name FROM pg_topics WHERE topic = 0 AND focus != 'z';");
+		$data->source_categories = $wpdb->get_results("SELECT DISTINCT category FROM pg_sources ORDER BY category;");
+		$data->sources = $wpdb->get_results("SELECT * FROM pg_sources ORDER BY source;");
+		return $data;
 	}
 
 	function callback_for_setting_up_scripts() {
