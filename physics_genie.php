@@ -3,448 +3,709 @@
 /*
 Plugin Name: physics_genie
 */
+function add_cors_http_header(){
+  header("Access-Control-Allow-Origin: *");
+}
+add_action('init','add_cors_http_header');
+
 
 class Physics_Genie {
 
-	public function __construct() {
-		$personalize_login = new Personalize_Login();
-
-
-		// Shortcodes
-		add_shortcode('play_menu', array($this, 'render_play_menu'));
-		add_shortcode('problem', array($this, 'render_problem'));
-		add_shortcode('problem_submit', array($this, 'render_problem_submit'));
-		add_shortcode('register-problem-setup', array($this, 'render_register_problem_setup'));
-
-		// Actions
-		add_action('wp', array($this, 'remove_admin_bar'));
-		add_action('wp_enqueue_scripts', array($this, 'callback_for_setting_up_scripts'));
-		add_action( 'template_redirect', array($this, 'template_redirect') );
-
-		// Ajax Actions
-		add_action('wp_ajax_check_answer', array($this, 'check_answer'));
-		add_action('wp_ajax_submit_answer', array($this, 'submit_answer'));
-		add_action('wp_ajax_save_problem', array($this, 'save_problem'));
-		add_action('wp_ajax_add_source', array($this, 'add_source'));
-		add_action('wp_ajax_submit_problem', array($this, 'submit_problem'));
-
-		// Registers API routes
-		add_action('rest_api_init', function(){
-			// Registers the path /physics_genie/git-deploy to update the plugin
-			register_rest_route( 'physics_genie', '/git-deploy', array(
-				'methods'  => 'POST',
-				'callback' => array($this, 'deploy'),
-			));
-
-			//Get user metadata
-			register_rest_route('physics_genie', 'user-metadata', array(
-				'methods' => 'GET',
-				'callback' => array($this, 'get_user_metadata')
-			));
-
-			//Get problem by problem id
-			register_rest_route('physics_genie', 'problem/(?P<problem>\d+)', array(
-				'methods' => 'GET',
-				'callback' => array($this, 'get_problem_by_id')
-			));
-
-			//Get contributor problems from token
-			register_rest_route('physics_genie', 'contributor-problems', array(
-				'methods' => 'GET',
-				'callback' => array($this, 'get_contributor_problems')
-			));
-
-			//Get submit data
-			register_rest_route('physics_genie', 'submit-data', array(
-				'methods' => 'GET',
-				'callback' => array($this, 'get_submit_data')
-			));
-} );
-	}
-
-	public function deploy() {
-		require_once('deploy.php');
-	}
-
-	public function get_user_metadata() {
-		$data = null;
-		$data->contributor = ((current_user_can('administrator') || current_user_can('editor') || current_user_can('contributor')) ? true : false);
-		return $data;
-	}
-
-	public function get_problem_by_id( $data ) {
-		global $wpdb;
-
-		$problem = $wpdb->get_results("SELECT * FROM pg_problems WHERE pg_problems.problem_id = ".$data['problem'].";", OBJECT)[0];
-		$problem->main_focus = $wpdb->get_results("SELECT name FROM pg_topics WHERE topic = 0 AND focus = '".$problem->main_focus."';")[0]->name;
-		$problem->other_foci = $wpdb->get_results("SELECT name FROM pg_topics WHERE topic = 0 AND focus = '".substr($problem->other_foci, 0)."';");
-
-		return $problem;
-	}
-
-	public function get_contributor_problems() {
-		global $wpdb;
-
-		return $wpdb->get_results("SELECT * FROM pg_problems WHERE submitter = ".(get_current_user_id() === 1 ? 17 : get_current_user_id())." ORDER BY problem_id DESC;");
-	}
-
-	public function get_submit_data() {
-		global $wpdb;
-		$data = null;
-		$data->topics = $wpdb->get_results("SELECT topic, name FROM pg_topics WHERE focus = 'z';");
-		$data->focuses = $wpdb->get_results("SELECT focus, name FROM pg_topics WHERE topic = 0 AND focus != 'z';");
-		$data->source_categories = $wpdb->get_results("SELECT DISTINCT category FROM pg_sources ORDER BY category;");
-		$data->sources = $wpdb->get_results("SELECT * FROM pg_sources ORDER BY source;");
-		return $data;
-	}
-
-	function callback_for_setting_up_scripts() {
-		wp_register_style( 'play_menu_style', plugins_url("/styles/play_menu.css", __FILE__));
-		wp_register_style( 'problem_style', plugins_url("/styles/problem.css", __FILE__));
-		wp_register_style( 'problem_submit_style', plugins_url("/styles/problem_submit.css", __FILE__));
-		wp_register_style( 'register_problem_setup_style', plugins_url("/styles/register_problem_setup.css", __FILE__));
-
-		wp_enqueue_style( 'play_menu_style' );
-		wp_enqueue_style( 'problem_style' );
-		wp_enqueue_style( 'problem_submit_style' );
-		wp_enqueue_style( 'register_problem_setup_style' );
-	}
 
-	public static function physics_genie_activated() {
-		Personalize_Login::login_activated();
-	}
+  public function __construct() {
+
+    add_action('init', array($this, 'connect_another_db'));
+
+    // Registers API routes
+    add_action('rest_api_init', function(){
+      // Registers the path /physics_genie/git-deploy-backend to update the plugin
+      register_rest_route( 'physics_genie', '/git-deploy-backend', array(
+        'methods'  => 'POST',
+        'callback' => array($this, 'deploy_backend'),
+      ));
+
+      // Registers the path /physics_genie/git-deploy-frontend to update the webapp
+      register_rest_route( 'physics_genie', '/git-deploy-frontend', array(
+        'methods'  => 'POST',
+        'callback' => array($this, 'deploy_frontend'),
+      ));
+
+      /* GET REQUESTS */
+      //Get user metadata
+      register_rest_route('physics_genie', 'user-metadata', array(
+        'methods' => 'GET',
+        'callback' => array($this, 'get_user_metadata')
+      ));
+
+      //Get random next problem
+      register_rest_route('physics_genie', 'problem', array(
+        'methods' => 'GET',
+        'callback' => array($this, 'get_problem')
+      ));
+
+      //Get problem by problem id
+      register_rest_route('physics_genie', 'problem/(?P<problem>\d+)', array(
+        'methods' => 'GET',
+        'callback' => array($this, 'get_problem_by_id')
+      ));
+
+      //Get contributor problems from token
+      register_rest_route('physics_genie', 'contributor-problems', array(
+        'methods' => 'GET',
+        'callback' => array($this, 'get_contributor_problems')
+      ));
+
+      //Get submit data
+      register_rest_route('physics_genie', 'submit-data', array(
+        'methods' => 'GET',
+        'callback' => array($this, 'get_submit_data')
+      ));
+
+      //Get user info
+      register_rest_route('physics_genie', 'user-info', array(
+        'methods' => 'GET',
+        'callback' => array($this, 'get_user_info')
+      ));
+
+      //Get user stats
+      register_rest_route('physics_genie', 'user-stats', array(
+        'methods' => 'GET',
+        'callback' => array($this, 'get_user_stats')
+      ));
+
+
+      /* POST REQUESTS */
+      //Register user
+      register_rest_route('physics_genie', 'register', array(
+        'methods' => 'POST',
+        'callback' => array($this, 'register_user')
+      ));
+
+      //Password reset
+      register_rest_route('physics_genie', 'password-reset', array(
+        'methods' => 'POST',
+        'callback' => array($this, 'password_reset')
+      ));
+
+      //Report problem error
+      register_rest_route('physics_genie', 'report-problem-error', array(
+        'methods' => 'POST',
+        'callback' => array($this, 'report_problem_error')
+      ));
+
+      //Submit problem
+      register_rest_route('physics_genie', 'submit-problem', array(
+        'methods' => 'POST',
+        'callback' => array($this, 'post_problem')
+      ));
+
+      //Add source
+      register_rest_route('physics_genie', 'add-source', array(
+        'methods' => 'POST',
+        'callback' => array($this, 'post_source')
+      ));
+
+      //Add focus
+      register_rest_route('physics_genie', 'add-focus', array(
+        'methods' => 'POST',
+        'callback' => array($this, 'post_focus')
+      ));
+
+      //Submit attempt
+      register_rest_route('physics_genie', 'submit-attempt', array(
+        'methods' => 'POST',
+        'callback' => array($this, 'post_attempt')
+      ));
+
+      //Make external API call
+      register_rest_route('physics_genie', 'external-request', array(
+        'methods' => 'POST',
+        'callback' => array($this, 'external_request')
+      ));
 
-	private function get_template_html( $template_name, $attributes = null ) {
-		if ( ! $attributes ) {
-			$attributes = array();
-		}
 
-		ob_start();
+      /* PUT REQUESTS */
+      //Reset user
+      register_rest_route('physics_genie', 'reset-user', array(
+        'methods' => 'PUT',
+        'callback' => array($this, 'reset_user')
+      ));
 
-		do_action( 'personalize_login_before_' . $template_name );
+      //Reset current problem
+      register_rest_route('physics_genie', 'reset-curr-problem', array(
+        'methods' => 'PUT',
+        'callback' => array($this, 'reset_curr_problem')
+      ));
 
-		require( 'templates/' . $template_name . '.php');
+      //Set user name
+      register_rest_route('physics_genie', 'user-name', array(
+        'methods' => 'PUT',
+        'callback' => array($this, 'set_user_name')
+      ));
 
-		do_action( 'personalize_login_after_' . $template_name );
+      //Set user setup
+      register_rest_route('physics_genie', 'user-setup', array(
+        'methods' => 'PUT',
+        'callback' => array($this, 'set_user_setup')
+      ));
 
-		$html = ob_get_contents();
-		ob_end_clean();
+      //Edit problem
+      register_rest_route('physics_genie', 'edit-problem', array(
+        'methods' => 'PUT',
+        'callback' => array($this, 'edit_problem')
+      ));
 
-		return $html;
-	}
 
 
-	public static function remove_admin_bar() {
-		if (!current_user_can('administrator') && !current_user_can('editor')) {
-			show_admin_bar(false);
-		}
-	}
+    });
+  }
 
-	public function render_play_menu() {
-		$attributes = shortcode_atts(array(
-			'contributor' => ((current_user_can('administrator') || current_user_can('editor') || current_user_can('contributor')) ? 1 : 0)
-		), null);
-		return $this->get_template_html( 'play_menu', $attributes);
-	}
+  public static function connect_another_db() {
+    global $seconddb;
+    $seconddb = new wpdb("physicsgenius", "Morin137!", "wordpress", "restored-instance-7-12-21.c4npn2kwj61c.us-west-1.rds.amazonaws.com");
+  }
 
-	public function render_problem() {
 
-		global $wpdb;
+  public function deploy_backend() {
+    require_once('deploy-backend.php');
+  }
 
-		// THE PROBLEM SELECTION ALGORITHM WILL GO HERE (SQL STATEMENT)
-		$problem = $wpdb->get_results( "SELECT * FROM pg_problems WHERE pg_problems.problem_id NOT IN (SELECT problem_id FROM pg_user_problems WHERE user_id = " . get_current_user_id() . ")", OBJECT )[0];
-		if (isset($_REQUEST['problem']) && (get_current_user_id() === 1 || get_current_user_id() === intval($wpdb->get_results("SELECT * FROM pg_problems WHERE pg_problems.problem_id = ".$_REQUEST['problem'].";")[0]->submitter))) {
-			$problem = $wpdb->get_results("SELECT * FROM pg_problems WHERE pg_problems.problem_id = ".$_REQUEST['problem'].";", OBJECT)[0];
-		} else {
-			wp_redirect("play/problem");
-		}
-		$problem->main_focus = $wpdb->get_results("SELECT name FROM pg_topics WHERE topic = 0 AND focus = '".$problem->main_focus."';")[0]->name;
-		$problem->other_foci = $wpdb->get_results("SELECT name FROM pg_topics WHERE topic = 0 AND focus = '".substr($problem->other_foci, 0)."';");
-
-		$topic_stats = $wpdb->get_results("SELECT * FROM pg_user_stats WHERE user_id = ".get_current_user_id()." AND topic = '".$problem->topic."';")[0];
-		$focus_stats = $wpdb->get_results("SELECT * FROM pg_user_stats WHERE user_id = ".get_current_user_id()." AND topic = '".$problem->topic.$problem->main_focus."';")[0];
-
-		$attributes = shortcode_atts( array(
-			'problem' => $problem,
-			'topic_stats' => $topic_stats,
-			'focus_stats' => $focus_stats
-		), null );
-
-		return $this->get_template_html( 'problem', $attributes);
-	}
-
-	public function render_problem_submit() {
-
-		global $wpdb;
-
-		$attributes = shortcode_atts(array(
-			'focuses' => $wpdb->get_results("SELECT focus, name FROM pg_topics WHERE topic = 0 AND focus != 'z';"),
-			'source_categories' => $wpdb->get_results("SELECT DISTINCT category FROM pg_sources ORDER BY category;"),
-			'sources' => $wpdb->get_results("SELECT * FROM pg_sources ORDER BY source;"),
-			'problems' => $wpdb->get_results("SELECT * FROM pg_problems WHERE submitter = ".(get_current_user_id() === 1 ? 17 : get_current_user_id())." ORDER BY problem_id DESC;")
-		), null);
-
-		return $this->get_template_html('problem_submit', $attributes);
-	}
-
-	public function render_register_problem_setup() {
-
-		global $wpdb;
-
-		$attributes = shortcode_atts(array(
-			'focuses' => $wpdb->get_results("SELECT focus, name FROM pg_topics WHERE topic = 0 AND focus != 'z';")
-		), null);
-
-		return $this->get_template_html('register_problem_setup', $attributes);
-	}
-
-
-
-	public function template_redirect() {
-		if (is_page('play')) {
-			wp_redirect( home_url( 'problem' ) );
-			die;
-		}
-
-		if ( (is_page( 'profile' ) || is_page('problem')) && ! is_user_logged_in() ) {
-			wp_redirect( home_url( 'member-login' ) );
-			die;
-		}
-	}
-
-	// Ajax Functions
-	public function check_answer() {
-
-		echo 1;
-
-		wp_die();
-	}
-
-
-	public function submit_answer() {
-		global $wpdb;
-
-		if (!($_POST['submitter'] === get_current_user_id())) {
-
-			$wpdb->insert(
-				'pg_user_problems',
-				array(
-					'user_id' => get_current_user_id(),
-					'problem_id' => intval($_POST['problem_id']),
-					'num_attempts' => intval($_POST['num_attempts']),
-					'correct' => ($_POST['correct'] === 'true' ? true : false),
-					'saved' => false,
-					'skipped' => ($_POST['skipped'] === 'true' ? true : false)
-				)
-			);
-			if ($_POST['first_in_topic'] === 'true') {
-				$wpdb->insert(
-					'pg_user_stats',
-					array(
-						'user_id' => get_current_user_id(),
-						'topic' => $_POST['topic'],
-						'num_presented' => 1,
-						'num_skipped' => ($_POST['skipped'] === 'true' ? 1 : 0),
-						'num_saved' => 0,
-						'num_correct' => ($_POST['correct'] === 'true' ? 1 : 0),
-						'avg_attempts' => intval($_POST['num_attempts']),
-						'score' => 0,
-						'level' => 1,
-						'xp' => 10
-					)
-				);
-			} else {
-				$curr_stats = $wpdb->get_results("SELECT * FROM pg_user_stats WHERE user_id = ".get_current_user_id()." AND topic = ".$_POST['topic'].";")[0];
-				$wpdb->update(
-					'pg_user_stats',
-					array(
-						'num_presented' => $curr_stats->num_presented + 1,
-						'num_skipped' => $curr_stats->num_skipped + ($_POST['skipped'] === 'true' ? 1 : 0),
-						'num_correct' => $curr_stats->num_correct + ($_POST['correct'] === 'true' ? 1 : 0),
-						'avg_attempts' => (($curr_stats->avg_attempts * $curr_stats->num_presented) + intval($_POST['num_attempts']))/($curr_stats->num_skipped + intval($_POST['num_attempts'])),
-						'level' => ($curr_stats->xp + 10 >= 100 ? $curr_stats->level + 1 : $curr_stats->level),
-						'xp' => ($curr_stats->xp + 10 >= 100 ? $curr_stats->xp + 10 - 100 : $curr_stats->xp + 10)
-					),
-					array(
-						'user_id' => get_current_user_id(),
-						'topic' => $_POST['topic']
-					),
-					array('%d'),
-					array('%d', '%s')
-				);
-			}
-
-			if ($_POST['first_in_focus'] === 'true') {
-				$wpdb->insert(
-					'pg_user_stats',
-					array(
-						'user_id' => get_current_user_id(),
-						'topic' => $_POST['topic'].$_POST['focus'],
-						'num_presented' => 1,
-						'num_skipped' => ($_POST['skipped'] === 'true' ? 1 : 0),
-						'num_saved' => 0,
-						'num_correct' => ($_POST['correct'] === 'true' ? 1 : 0),
-						'avg_attempts' => intval($_POST['num_attempts']),
-						'score' => 0,
-						'level' => 1,
-						'xp' => 10
-					)
-				);
-			} else {
-				$curr_stats = $wpdb->get_results("SELECT * FROM pg_user_stats WHERE user_id = ".get_current_user_id()." AND topic = ".$_POST['topic'].$_POST['focus'].";")[0];
-				$wpdb->update(
-					'pg_user_stats',
-					array(
-						'num_presented' => $curr_stats->num_presented + 1,
-						'num_skipped' => $curr_stats->num_skipped + ($_POST['skipped'] === 'true' ? 1 : 0),
-						'num_correct' => $curr_stats->num_correct + ($_POST['correct'] === 'true' ? 1 : 0),
-						'avg_attempts' => (($curr_stats->avg_attempts * $curr_stats->num_presented) + intval($_POST['num_attempts']))/($curr_stats->num_skipped + intval($_POST['num_attempts'])),
-						'level' => ($curr_stats->xp + 10 >= 100 ? $curr_stats->level + 1 : $curr_stats->level),
-						'xp' => ($curr_stats->xp + 10 >= 100 ? $curr_stats->xp + 10 - 100 : $curr_stats->xp + 10)
-					),
-					array(
-						'user_id' => get_current_user_id(),
-						'topic' => $_POST['topic'].$_POST['focus']
-					),
-					array('%d'),
-					array('%d', '%s')
-				);
-			}
-
-
-		}
-	}
-
-	public function save_problem() {
-		global $wpdb;
-		$wpdb->update(
-			'pg_user_problems',
-			array('saved' => ($_POST['saved'] === 'true' ? true : false)),
-			array(
-				'user_id' => get_current_user_id(),
-				'problem_id' => intval($_POST['problem_id'])
-			),
-			array('%d'),
-			array('%d', '%d')
-		);
-	}
-
-
-	public function add_source() {
-		global $wpdb;
-
-		$wpdb->insert(
-			'pg_sources',
-			array(
-				'category' => $_POST['category'],
-				'author' => $_POST['author'],
-				'source' => $_POST['source']
-			)
-		);
-
-	}
-
-	public function submit_problem() {
-		global $wpdb;
-
-		if ($_POST['editing'] === 'true') {
-			$wpdb->update(
-				'pg_problems',
-				array(
-					'problem_text' => $_POST['problem_text'],
-					'diagram' => ($_POST['diagram'] === "" ? null: $_POST['diagram']),
-					'answer' => $_POST['answer'],
-					'solution' => $_POST['solution'],
-					'hint_one' => $_POST['hint_one'],
-					'hint_two' => ($_POST['hint_two'] === "" ? null: $_POST['hint_two']),
-					'source' => intval($_POST['source']),
-					'number_in_source' => $_POST['problem_number'],
-					'submitter' => (get_current_user_id() === 1 ? 16 : get_current_user_id()),
-					'difficulty' => intval($_POST['difficulty']),
-					'calculus' => $_POST['calculus'],
-					'topic' => $_POST['topic'],
-					'main_focus' => $_POST['main_focus'],
-					'other_foci' => ($_POST['other_foci'] === "" ? null: $_POST['other_foci']),
-					'date_added' => date('Y-m-d'),
-				),
-				array(
-					'problem_id' => intval($_POST['problem_id'])
-				),
-				null,
-				array('%d')
-			);
-		} else {
-			$wpdb->insert(
-				'pg_problems',
-				array(
-					'problem_text' => $_POST['problem_text'],
-					'diagram' => ($_POST['diagram'] === "" ? null: $_POST['diagram']),
-					'answer' => $_POST['answer'],
-					'solution' => $_POST['solution'],
-					'hint_one' => $_POST['hint_one'],
-					'hint_two' => ($_POST['hint_two'] === "" ? null: $_POST['hint_two']),
-					'source' => intval($_POST['source']),
-					'number_in_source' => $_POST['problem_number'],
-					'submitter' => get_current_user_id(),
-					'difficulty' => intval($_POST['difficulty']),
-					'calculus' => $_POST['calculus'],
-					'topic' => $_POST['topic'],
-					'main_focus' => $_POST['main_focus'],
-					'other_foci' => ($_POST['other_foci'] === "" ? null: $_POST['other_foci']),
-					'date_added' => date('Y-m-d'),
-				)
-			);
-		}
-	}
+  public function deploy_frontend() {
+    require_once('deploy-frontend.php');
+  }
+
+  // Method: POST, PUT, GET etc
+  // Data: array("param" => "value") ==> index.php?param=value
+  public function CallAPI($method, $url, $data = false)
+  {
+    $curl = curl_init();
+
+    switch ($method)
+    {
+      case "POST":
+        curl_setopt($curl, CURLOPT_POST, 1);
+
+        if ($data)
+          curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+        break;
+      case "PUT":
+        curl_setopt($curl, CURLOPT_PUT, 1);
+        break;
+      default:
+        if ($data)
+          $url = sprintf("%s?%s", $url, http_build_query($data));
+    }
+
+    curl_setopt($curl, CURLOPT_URL, $url);
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+
+    $result = curl_exec($curl);
+
+
+    curl_close($curl);
+
+    return $result;
+  }
+
+
+  // GET REQUESTS
+  public function get_user_metadata() {
+    $data = null;
+
+    $data->contributor = ((current_user_can('administrator') || current_user_can('editor') || current_user_can('contributor')) ? true : false);
+
+    return $data;
+  }
+
+  public function get_user_info() {
+    global $wpdb;
+
+    $data = null;
+
+    $data->setup = $wpdb->get_results("SELECT curr_diff, curr_topics, curr_foci, calculus FROM pg_users WHERE user_id = ".get_current_user_id().";", OBJECT)[0];
+
+
+    return $data;
+  }
+
+  public function get_user_stats($request_data) {
+    global $wpdb;
+
+    $stats = $wpdb->get_results("SELECT topic, focus, num_presented, num_correct, avg_attempts, xp, streak, longest_winstreak, longest_losestreak FROM wordpress.pg_user_stats WHERE user_id = ".get_current_user_id()." AND ".(isset($request_data['topic']) ? 'topic = "'.$request_data['topic'].'"' : 'true')." AND ".(isset($request_data['focus']) ? 'focus = "'.$request_data['focus'].'"' : 'true')." ORDER BY topic, focus;", OBJECT);
+
+    return $stats;
+  }
+
+  public function get_problem() {
+    global $wpdb;
+
+    if ($wpdb->get_results("SELECT curr_problem FROM pg_users WHERE user_id = ".get_current_user_id().";", OBJECT)[0]->curr_problem === null) {
+
+      $problem = $wpdb->get_results("SELECT * FROM wordpress.pg_problems WHERE (SELECT curr_topics FROM wordpress.pg_users WHERE user_id = 1) LIKE CONCAT('%', topic, '%') AND (SELECT curr_foci FROM wordpress.pg_users WHERE user_id = ".get_current_user_id().") LIKE CONCAT('%', main_focus, '%') AND difficulty > (SELECT curr_diff FROM wordpress.pg_users WHERE user_id = 1) AND difficulty <= (SELECT curr_diff FROM wordpress.pg_users WHERE user_id = ".get_current_user_id().") + IF((SELECT curr_diff FROM wordpress.pg_users WHERE user_id = ".get_current_user_id().") = 2, 3, 2) AND IF((SELECT calculus FROM wordpress.pg_users WHERE user_id = ".get_current_user_id()."), true, calculus != 'Required') AND problem_id NOT IN (SELECT problem_id FROM wordpress.pg_user_problems WHERE user_id = ".get_current_user_id().") ORDER BY RAND() LIMIT 1;", OBJECT);
+
+      if (count($problem) == 0) {
+        return null;
+      } else {
+        $problem = $problem[0];
+
+        $wpdb->update(
+          'pg_users',
+          array(
+            'curr_problem' => $problem->problem_id
+          ),
+          array(
+            'user_id' => get_current_user_id()
+          ),
+          null,
+          array('%d')
+        );
+
+        return $problem;
+      }
+
+    } else {
+      return $wpdb->get_results("SELECT * FROM pg_problems WHERE problem_id = (SELECT curr_problem FROM pg_users WHERE user_id  = ".get_current_user_id().");", OBJECT)[0];
+    }
+
+  }
+
+  public function get_problem_by_id( $data ) {
+    global $wpdb;
+
+    $problem = $wpdb->get_results("SELECT * FROM pg_problems WHERE pg_problems.problem_id = ".$data['problem'].";", OBJECT)[0];
+
+    return $problem;
+
+  }
+
+  public function get_contributor_problems() {
+    global $wpdb;
+
+    $problem = $wpdb->get_results("SELECT * FROM pg_problems WHERE submitter = ".(get_current_user_id())." ORDER BY problem_id DESC;");
+
+    if (get_current_user_id() === 1 || get_current_user_id() === 6 || get_current_user_id() === 16) {
+      $problem = $wpdb->get_results("SELECT * FROM pg_problems ORDER BY problem_id DESC;");
+    }
+
+    return $problem;
+  }
+
+  public function get_submit_data() {
+    global $wpdb;
+    $data = null;
+    $data->topics = $wpdb->get_results("SELECT topic, name FROM pg_topics WHERE focus = 'z';");
+    $data->focuses = $wpdb->get_results("SELECT topic, focus, name FROM pg_topics WHERE topic = 0 AND focus != 'z';");
+    $data->source_categories = $wpdb->get_results("SELECT DISTINCT category FROM pg_sources ORDER BY category;");
+    $data->sources = $wpdb->get_results("SELECT * FROM pg_sources ORDER BY source;");
+    return $data;
+  }
+
+
+  // POST REQUESTS
+  public function register_user($request_data) {
+
+    $user_data = array(
+      'user_login'    => $request_data["username"],
+      'user_email'    => $request_data["email"],
+      'user_pass'     => $request_data["password"],
+      'first_name'    => "",
+      'last_name'     => "",
+      'nickname'      => "",
+    );
+
+    $user_id = wp_insert_user( $user_data );
+
+    if (is_wp_error($user_id)) {
+      return $user_id->get_error_messages();
+    }
+
+    global $wpdb;
+    $wpdb->insert(
+      'pg_users',
+      array(
+        'user_id' => $user_id,
+        'curr_diff' => 1,
+        'curr_topics' => "0",
+        'curr_foci' => "78",
+        'calculus' => 1,
+      )
+    );
+
+    $wpdb->insert(
+      'pg_user_stats',
+      array(
+        'user_id' => $user_id,
+        'topic' => 'z',
+        'focus' => 'z',
+        'num_presented' => 0,
+        'num_saved' => 0,
+        'num_correct' => 0,
+        'avg_attempts' => 0,
+        'xp' => 0,
+        'streak' => 0,
+        'longest_winstreak' => 0,
+        'longest_losestreak' => 0
+      )
+    );
+
+    foreach ($wpdb->get_results("SELECT topic, focus FROM pg_topics;", OBJECT) as $focus) {
+      $wpdb->insert(
+      'pg_user_stats',
+        array(
+          'user_id' => $user_id,
+          'topic' => $focus->topic,
+          'focus' => $focus->focus,
+          'num_presented' => 0,
+          'num_saved' => 0,
+          'num_correct' => 0,
+          'avg_attempts' => 0,
+          'xp' => 0,
+          'streak' => 0,
+          'longest_winstreak' => 0,
+          'longest_losestreak' => 0
+        )
+      );
+    }
+
+    return [];
+
+  }
+
+  public function password_reset($request_data) {
+
+    $user_data = get_user_by('email', $request_data["email"]);
+
+    $user_login = $user_data->user_login;
+    $user_email = $user_data->user_email;
+    $key = get_password_reset_key( $user_data );
+
+
+    $message = __('Someone requested that the password be reset for the following account:') . "\r\n\r\n";
+    $message .= network_home_url( '/' ) . "\r\n\r\n";
+    $message .= sprintf(__('Username: %s'), $user_login) . "\r\n\r\n";
+    $message .= __('If this was a mistake, just ignore this email and nothing will happen.') . "\r\n\r\n";
+    $message .= __('To reset your password, visit the following address:') . "\r\n\r\n";
+    $message .= network_site_url("wp-login.php?action=rp&key=$key&login=" . rawurlencode($user_login), 'login');
+
+    return wp_mail($user_email, "[Physics Genie] Password Reset", $message);
+  }
+
+  public function external_request($request_data) {
+    return $this->CallAPI($request_data["method"], $request_data["url"], $request_data["data"]);
+  }
+
+  public function report_problem_error($request_data) {
+    global $wpdb;
+    $wpdb->insert(
+      'pg_problem_errors',
+      array(
+        'user_id' => get_current_user_id(),
+        'problem_id' => $request_data['problem_id'],
+        'error_location' => ($request_data['error_location'] === "" ? null : $request_data['error_location']),
+        'error_type' => ($request_data['error_type'] === "" ? null : $request_data['error_type']),
+        'error_message' => ($request_data['error_message'] === "" ? null : $request_data['error_message']),
+      )
+    );
+
+    return $wpdb->insert_id;
+  }
+
+  public function post_problem($request_data) {
+    global $wpdb;
+    $wpdb->insert(
+      'pg_problems',
+      array(
+        'problem_text' => $request_data['problem_text'],
+        'diagram' => ($request_data['diagram'] === "" ? null : $request_data['diagram']),
+        'answer' => $request_data['answer'],
+        'must_match' => ($request_data['must_match'] === 'true' ? 1 : 0),
+        'error' => floatval($request_data['error']),
+        'solution' => $request_data['solution'],
+        'solution_diagram' => ($request_data['solution_diagram'] === "" ? null : $request_data['solution_diagram']),
+        'hint_one' => $request_data['hint_one'],
+        'hint_two' => ($request_data['hint_two'] === "" ? null : $request_data['hint_two']),
+        'source' => intval($request_data['source']),
+        'number_in_source' => $request_data['number_in_source'],
+        'submitter' => get_current_user_id(),
+        'difficulty' => intval($request_data['difficulty']),
+        'calculus' => $request_data['calculus'],
+        'topic' => $request_data['topic'],
+        'main_focus' => $request_data['main_focus'],
+        'other_foci' => ($request_data['other_foci'] === "" ? null: $request_data['other_foci']),
+        'date_added' => date('Y-m-d')
+      )
+    );
+
+    return $wpdb->insert_id;
+  }
+
+  public function post_source($request_data) {
+    global $wpdb;
+
+    $wpdb->insert('pg_sources',
+      array(
+        'category' => $request_data['category'],
+        'author' => $request_data['author'],
+        'source' => $request_data['source']
+      )
+    );
+
+    return $wpdb->insert_id;
+  }
+
+  public function post_focus($request_data) {
+    // IMPLEMENT THIS WHEN I NEED TO
+  }
+
+  public function post_attempt($request_data) {
+    global $wpdb;
+
+
+    $wpdb->insert(
+      'pg_user_problems',
+      array(
+        'user_id' => get_current_user_id(),
+        'problem_id' => intval($request_data['problem_id']),
+        'num_attempts' => intval($request_data['num_attempts']),
+        'correct' => ($request_data['correct'] === 'true' ? true : false),
+        'saved' => false,
+        'date_attempted' => date('Y-m-d H:i:s')
+      )
+    );
+
+    $wpdb->update(
+      'pg_users',
+      array(
+        'curr_problem' => null
+      ),
+      array(
+        'user_id' => get_current_user_id()
+      ),
+      null,
+      array('%d')
+    );
+
+    //Focus stats
+    $curr_focus_stats = $wpdb->get_results("SELECT * FROM pg_user_stats WHERE user_id = ".get_current_user_id()." AND topic = '".$request_data['topic']."' AND focus = '".$request_data['focus']."';", OBJECT)[0];
+
+    $focus_xp = $curr_focus_stats->xp;
+    $focus_streak = $curr_focus_stats->streak;
+    if ($request_data['correct'] === 'true' && $focus_streak > 0 && ($focus_streak + 1) % 5 === 0) {
+      $focus_xp = intval(1.15*($curr_focus_stats->xp+intval($request_data['difficulty'])*(4-intval($request_data['num_attempts']))));
+    } else if ($request_data['correct'] === 'true') {
+      $focus_xp = $curr_focus_stats->xp+intval($request_data['difficulty'])*(4-intval($request_data['num_attempts']));
+    } else if (!($request_data['correct'] === 'true') && $focus_streak < 0 && ($focus_streak - 1) % 3 === 0) {
+      $focus_xp = intval(0.85*$curr_focus_stats->xp);
+    }
+
+    $wpdb->update(
+      'pg_user_stats',
+      array(
+        'num_presented' => $curr_focus_stats->num_presented + 1,
+        'num_correct' => $curr_focus_stats->num_correct + ($request_data['correct'] === 'true' ? 1 : 0),
+        'avg_attempts' => ($curr_focus_stats->avg_attempts * $curr_focus_stats->num_presented + intval($request_data['num_attempts']))/($curr_focus_stats->num_presented + 1),
+        'xp' => $focus_xp,
+        'streak' => ($request_data['correct'] === 'true' ? ($focus_streak > 0 ? $focus_streak + 1 : 1) : ($focus_streak > 0 ? -1 : $focus_streak - 1)),
+        'longest_winstreak' => (($request_data['correct'] === 'true' && $focus_streak >= $curr_focus_stats->longest_winstreak) ? ($focus_streak + 1) : ($request_data['correct'] === 'true' && $curr_focus_stats->longest_winstreak === 0 ? 1 : $curr_focus_stats->longest_winstreak)),
+        'longest_losestreak' => ((!($request_data['correct'] === 'true') && -1*$focus_streak >= $curr_focus_stats->longest_losestreak) ? (1 - $focus_streak) : (!($request_data['correct'] === 'true') && $curr_focus_stats->longest_losestreak == 0 ? 1 : $curr_focus_stats->longest_losestreak))
+      ),
+      array(
+        'user_id' => get_current_user_id(),
+        'topic' => $request_data['topic'],
+        'focus' => $request_data['focus']
+      ),
+      null,
+      array('%d', '%s', '%s')
+    );
+
+    //Topic stats
+    $curr_topic_stats = $wpdb->get_results("SELECT * FROM pg_user_stats WHERE user_id = ".get_current_user_id()." AND topic = '".$request_data['topic']."' AND focus = 'z';", OBJECT)[0];
+
+    $wpdb->update(
+      'pg_user_stats',
+      array(
+        'num_presented' => $curr_topic_stats->num_presented + 1,
+        'num_correct' => $curr_topic_stats->num_correct + ($request_data['correct'] === 'true' ? 1 : 0),
+        'avg_attempts' => ($curr_topic_stats->avg_attempts * $curr_topic_stats->num_presented + intval($request_data['num_attempts']))/($curr_topic_stats->num_presented + 1),
+        'xp' => $curr_topic_stats->xp-$curr_focus_stats->xp+$focus_xp,
+        'streak' => ($request_data['correct'] === 'true' ? ($curr_topic_stats->streak > 0 ? $curr_topic_stats->streak + 1 : 1) : ($curr_topic_stats->streak > 0 ? -1 : $curr_topic_stats->streak - 1)),
+        'longest_winstreak' => (($request_data['correct'] === 'true' && $curr_topic_stats->streak >= $curr_topic_stats->longest_winstreak) ? ($curr_topic_stats->streak + 1) : ($request_data['correct'] === 'true' && $curr_topic_stats->longest_winstreak === 0 ? 1 : $curr_topic_stats->longest_winstreak)),
+        'longest_losestreak' => ((!($request_data['correct'] === 'true') && -1*$curr_topic_stats->streak >= $curr_topic_stats->longest_losestreak) ? (1 - $curr_topic_stats->streak) : (!($request_data['correct'] === 'true') && $curr_topic_stats->longest_losestreak == 0 ? 1 : $curr_topic_stats->longest_losestreak))
+      ),
+      array(
+        'user_id' => get_current_user_id(),
+        'topic' => $request_data['topic'],
+        'focus' => 'z'
+      ),
+      null,
+      array('%d', '%s', '%s')
+    );
+
+    //User stats
+    $curr_user_stats = $wpdb->get_results("SELECT * FROM pg_user_stats WHERE user_id = ".get_current_user_id()." AND topic = 'z' AND focus = 'z';", OBJECT)[0];
+
+    $wpdb->update(
+      'pg_user_stats',
+      array(
+        'num_presented' => $curr_user_stats->num_presented + 1,
+        'num_correct' => $curr_user_stats->num_correct + ($request_data['correct'] === 'true' ? 1 : 0),
+        'avg_attempts' => ($curr_user_stats->avg_attempts * $curr_user_stats->num_presented + intval($request_data['num_attempts']))/($curr_user_stats->num_presented + 1),
+        'xp' => $curr_user_stats->xp-$curr_focus_stats->xp+$focus_xp,
+        'streak' => ($request_data['correct'] === 'true' ? ($curr_user_stats->streak > 0 ? $curr_user_stats->streak + 1 : 1) : ($curr_user_stats->streak > 0 ? -1 : $curr_user_stats->streak - 1)),
+        'longest_winstreak' => (($request_data['correct'] === 'true' && $curr_user_stats->streak >= $curr_user_stats->longest_winstreak) ? ($curr_user_stats->streak + 1) : ($request_data['correct'] === 'true' && $curr_user_stats->longest_winstreak === 0 ? 1 : $curr_user_stats->longest_winstreak)),
+        'longest_losestreak' => ((!($request_data['correct'] === 'true') && -1*$curr_user_stats->streak >= $curr_user_stats->longest_losestreak) ? (1 - $curr_user_stats->streak) : (!($request_data['correct'] === 'true') && $curr_user_stats->longest_losestreak == 0 ? 1 : $curr_user_stats->longest_losestreak))
+      ),
+      array(
+        'user_id' => get_current_user_id(),
+        'topic' => 'z',
+        'focus' => 'z'
+      ),
+      null,
+      array('%d', '%s', '%s')
+    );
+
+    return 1;
+  }
+
+
+  // PUT REQUESTS
+  public function reset_user($request_data) {
+
+    global $wpdb;
+
+    if (current_user_can('administrator')) {
+
+      $wpdb->update(
+        'pg_users',
+        array(
+          'curr_diff' => 0,
+          'curr_topics' => '0',
+          'curr_foci' => '78',
+          'calculus' => true
+        ),
+        array(
+          'user_id' => $request_data['user_id']
+        ),
+        null,
+        array('%d')
+      );
+
+      $wpdb->update(
+        'pg_user_stats',
+        array(
+          'num_presented' => 0,
+          'num_saved' => 0,
+          'num_correct' => 0,
+          'avg_attempts' => 0,
+          'xp' => 0,
+          'streak' => 0,
+          'longest_winstreak' => 0,
+          'longest_losestreak' => 0
+        ),
+        array(
+          'user_id' => $request_data['user_id'],
+          'topic' => 'z',
+          'focus' => 'z'
+        ),
+        null,
+        array('%d', '%s', '%s')
+      );
+
+      foreach ($wpdb->get_results("SELECT topic, focus FROM pg_topics;", OBJECT) as $focus) {
+        $wpdb->update(
+          'pg_user_stats',
+          array(
+            'num_presented' => 0,
+            'num_saved' => 0,
+            'num_correct' => 0,
+            'avg_attempts' => 0,
+            'xp' => 0,
+            'streak' => 0,
+            'longest_winstreak' => 0,
+            'longest_losestreak' => 0
+          ),
+          array(
+            'user_id' => $request_data['user_id'],
+            'topic' => $focus->topic,
+            'focus' => $focus->focus,
+          ),
+          null,
+          array('%d', '%s', '%s')
+        );
+      }
+
+    }
+
+    return 1;
+
+  }
+
+  public function reset_curr_problem() {
+    global $wpdb;
+    return $wpdb->update(
+      'pg_users',
+      array(
+        'curr_problem' => null,
+      ),
+      array(
+        'user_id' => get_current_user_id()
+      ),
+      null,
+      array('%d')
+    );
+  }
+
+  public function set_user_name($request_data) {
+    global $wpdb;
+    return $wpdb->update('wp_users', array(
+      'user_login' => $request_data['name'],
+      'user_nicename' => $request_data['name']
+    ), array(
+      'ID' => get_current_user_id()
+    ), null, array('%d'));
+
+  }
+
+  public function set_user_setup($request_data) {
+    global $wpdb;
+    return $wpdb->update('pg_users', array(
+      'curr_diff' => intval($request_data['curr_diff']),
+      'curr_topics' => $request_data['curr_topics'],
+      'curr_foci' => $request_data['curr_foci'],
+      'calculus' => $request_data['calculus'] === 'true' ? 1 : 0
+    ), array(
+      'user_id' => get_current_user_id()
+    ), array('%d', '%s', '%s', '%d'), array('%d'));
+  }
+
+  public function edit_problem($request_data) {
+    global $wpdb;
+    return $wpdb->update('pg_problems', array(
+      'problem_text' => $request_data['problem_text'],
+      'diagram' => ($request_data['diagram'] === "" ? null : $request_data['diagram']),
+      'answer' => $request_data['answer'],
+      'must_match' => ($request_data['must_match'] === 'true' ? 1 : 0),
+      'error' => floatval($request_data['error']),
+      'solution' => $request_data['solution'],
+      'solution_diagram' => ($request_data['solution_diagram'] === "" ? null : $request_data['solution_diagram']),
+      'hint_one' => $request_data['hint_one'],
+      'hint_two' => ($request_data['hint_two'] === "" ? null : $request_data['hint_two']),
+      'source' => intval($request_data['source']),
+      'number_in_source' => $request_data['number_in_source'],
+      'difficulty' => intval($request_data['difficulty']),
+      'calculus' => $request_data['calculus'],
+      'topic' => $request_data['topic'],
+      'main_focus' => $request_data['main_focus'],
+      'other_foci' => ($request_data['other_foci'] === "" ? null: $request_data['other_foci'])
+    ), array(
+      'problem_id' => $request_data['problem_id']
+    ), null, array('%d'));
+  }
+
 }
 
 
-require plugin_dir_path( __FILE__ ) . 'personalize_login.php';
-
 // Initialize the plugin
 $physics_genie = new Physics_Genie();
-
-
-// Create the custom pages at plugin activation
-register_activation_hook( __FILE__, array( 'Personalize_login', 'physics_genie_activated' ) );
-
-
-//function getEquivSymbolicAssertionMessage($mathml1, $mathml2) {
-//	$assertion_name = 'equivalent_symbolic';
-//	$operation_name = 'getCheckAssertions';
-//
-//	$mathml1 = wrapInCDATA($mathml1);
-//	$mathml2 = wrapInCDATA($mathml2);
-//
-//	$xml = '<doProcessQuestions>'.            '<processQuestions>'.              '<processQuestion>'.                '<question>'.                  '<correctAnswers>'.                    '<correctAnswer type="mathml">'.                         $mathml1.                    '</correctAnswer>'.                  '</correctAnswers>'.                  '<assertions>'.                    '<assertion name="'.$assertion_name.'" />'.                  '</assertions>'.                '</question>'.                '<userData>'.                  '<answers>'.                    '<answer type="mathml">'.                      $mathml2.                    '</answer>'.                  '</answers>'.                '</userData>'.                '<processes>'.                  '<'.$operation_name.'/>'.                '</processes>'.              '</processQuestion>'.            '</processQuestions>'.          '</doProcessQuestions>';
-//	return $xml;
-//}
-//
-//function callWIRISAPI($xml) {
-//	$url = 'http://services.wiris.com/quizzes/rest';
-//	$opts = array( 'http' =>
-//		               array('method' => 'POST',
-//		                     'header' => 'Content-type: text/xml; charset=utf-8'."\n".
-//		                                 'Content-Length: '.strlen($xml)."\n",
-//		                     'content'=> $xml
-//		               )
-//	);
-//	$context = stream_context_create($opts);
-//	$result = file_get_contents($url, false, $context);
-//	return $result;
-//}
-//
-//function wrapInCDATA($str) {
-//	return '<![CDATA['.$str.']]>';
-//}
-//
-//function getReturnValue($xml) {
-//	//in a more general purpose client the xml should be completely parsed,
-//	//here we go directly to the result.
-//	$pattern = '/<check[^>]*>(\d+)<\/check>/';
-//	$matches = array();
-//	preg_match($pattern, $xml, $matches);
-//	return $matches[1];
-//}
 
 
